@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRS AI - Document Editor</title>
+
+<!-- // Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+<!-- // Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+/* // =========================
+   // GLOBAL
+   // ========================= */
+*{box-sizing:border-box}
+:root{
+  --green:#19a974;--green-dark:#12845b;--green-light:#eaf9f2;
+  --text:#17221e;--muted:#748079;--border:#e4ebe7;
+  --bg:#f7faf8;--white:#fff;--danger:#e45555;
+  --shadow:0 8px 28px rgba(24,49,39,.07)
+}
+body{margin:0;font-family:"DM Sans",sans-serif;color:var(--text);background:var(--bg)}
+button,input,textarea,select{font:inherit}button{cursor:pointer}
+
+/* // =========================
+   // SIDEBAR
+   // ========================= */
+.app{min-height:100vh;display:flex}
+.sidebar{
+  width:250px;min-height:100vh;background:#fff;border-right:1px solid var(--border);
+  padding:22px 15px;position:fixed;left:0;top:0;bottom:0;z-index:20
+}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 10px 25px}
+.brand-logo{
+  width:38px;height:38px;border-radius:11px;background:var(--green);color:#fff;
+  display:grid;place-items:center;font-weight:700;font-family:"Space Grotesk"
+}
+.brand-name{font-family:"Space Grotesk";font-size:19px;font-weight:700}
+.brand-name span{color:var(--green)}
+.nav-label{color:#9aa59f;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:0 11px 9px}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:11px 12px;margin:3px 0;
+  color:#637069;text-decoration:none;border-radius:10px;font-size:14px;transition:.2s
+}
+.nav-item:hover{background:#f2f8f5;color:var(--green-dark)}
+.nav-item.active{background:var(--green-light);color:var(--green-dark);font-weight:700}
+.user-card{
+  position:absolute;bottom:20px;left:15px;right:15px;border-top:1px solid var(--border);
+  padding:17px 8px 0;display:flex;align-items:center;gap:10px
+}
+.avatar{width:36px;height:36px;border-radius:50%;background:#d9f3e7;color:var(--green-dark);display:grid;place-items:center;font-weight:700;font-size:13px}
+.user-info strong{display:block;font-size:13px}.user-info span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+
+/* // =========================
+   // MAIN / TOPBAR
+   // ========================= */
+.main{margin-left:250px;width:calc(100% - 250px);min-width:0}
+.topbar{
+  height:67px;background:#fff;border-bottom:1px solid var(--border);display:flex;
+  align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10
+}
+.breadcrumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+.breadcrumb strong{color:var(--text)}
+.top-actions{display:flex;align-items:center;gap:9px}
+.icon-btn{
+  width:38px;height:38px;border:1px solid var(--border);background:#fff;border-radius:9px;
+  display:grid;place-items:center;color:#68756e
+}
+.icon-btn:hover{background:#f5f8f6}
+.save-btn,.export-btn{
+  border:0;border-radius:9px;padding:10px 15px;font-weight:700;display:flex;align-items:center;gap:7px
+}
+.save-btn{background:var(--green);color:#fff}.save-btn:hover{background:var(--green-dark)}
+.export-btn{background:#edf5f1;color:var(--green-dark)}
+
+/* // =========================
+   // EDITOR HEADER
+   // ========================= */
+.editor-head{background:#fff;border-bottom:1px solid var(--border);padding:22px 30px 18px}
+.editor-title{font-family:"Space Grotesk";font-size:25px;margin:0}
+.eyebrow{color:var(--green);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.editor-meta{margin-top:7px;color:var(--muted);font-size:12px;display:flex;gap:15px;flex-wrap:wrap}
+.editor-body{padding:22px 30px 50px}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:20px;max-width:1450px;margin:auto}
+
+/* // =========================
+   // TOOLBAR
+   // ========================= */
+.toolbar{
+  background:#fff;border:1px solid var(--border);border-radius:12px 12px 0 0;
+  padding:9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;box-shadow:var(--shadow)
+}
+.tool-btn{
+  height:34px;min-width:34px;border:0;background:transparent;border-radius:7px;
+  display:grid;place-items:center;color:#56635c
+}
+.tool-btn:hover{background:#edf7f2;color:var(--green-dark)}
+.divider{width:1px;height:22px;background:var(--border);margin:0 4px}
+.format-select{height:34px;border:1px solid var(--border);border-radius:7px;background:#fff;padding:0 8px;color:#56635c;outline:0}
+
+/* // =========================
+   // DOCUMENT
+   // ========================= */
+.document{
+  background:#fff;border:1px solid var(--border);border-top:0;min-height:720px;
+  padding:38px 54px;box-shadow:var(--shadow);border-radius:0 0 12px 12px
+}
+.section{
+  position:relative;border:1px solid transparent;border-radius:9px;padding:12px 38px 12px 14px;
+  margin-bottom:8px
+}
+.section:hover{border-color:#dceae3;background:#fcfefd}
+.section.selected{border-color:#a9dec7;background:#fbfffd}
+.section h1,.section h2,.section h3{font-family:"Space Grotesk";margin:0 0 9px}
+.section h1{font-size:29px}.section h2{font-size:21px}.section h3{font-size:17px}
+.section p{line-height:1.75;color:#45534b;margin:7px 0;font-size:14px}
+.section ul,.section ol{color:#45534b;line-height:1.8;font-size:14px}
+[contenteditable=true]:focus{outline:0}
+.section-actions{position:absolute;top:10px;right:6px;display:none;flex-direction:column;gap:3px}
+.section:hover .section-actions,.section.selected .section-actions{display:flex}
+.mini-btn{
+  width:28px;height:28px;border:1px solid var(--border);background:#fff;border-radius:6px;
+  display:grid;place-items:center;color:#68756e
+}
+.mini-btn:hover{color:var(--green-dark);background:var(--green-light)}
+.mini-btn.delete:hover{color:var(--danger);background:#fff0f0}
+.doc-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+.doc-table th,.doc-table td{border:1px solid #dfe8e3;padding:10px;text-align:left}
+.doc-table th{background:#f2f8f5;font-weight:700}
+
+/* // =========================
+   // AI PANEL
+   // ========================= */
+.side-panel{
+  background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);
+  height:fit-content;position:sticky;top:90px;overflow:hidden
+}
+.panel-header{padding:17px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.ai-icon{width:34px;height:34px;border-radius:9px;background:var(--green-light);color:var(--green-dark);display:grid;place-items:center}
+.panel-header strong{font-family:"Space Grotesk";font-size:15px}
+.panel-header span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.ai-tools{padding:10px}
+.ai-tool{
+  width:100%;border:0;background:#fff;border-radius:9px;display:flex;align-items:center;
+  gap:11px;text-align:left;padding:12px 10px;color:#4c5952;font-size:13px
+}
+.ai-tool:hover{background:var(--green-light);color:var(--green-dark)}
+.ai-divider{height:1px;background:var(--border);margin:8px 0}
+.ai-chat{padding:14px;border-top:1px solid var(--border);background:#fbfdfc}
+.chat-title{font-size:12px;font-weight:700;margin-bottom:9px}
+.chat-input{width:100%;min-height:80px;resize:vertical;border:1px solid var(--border);border-radius:9px;padding:10px;outline:0;background:#fff;font-size:12px}
+.ask-btn{width:100%;margin-top:8px;border:0;background:var(--green);color:#fff;border-radius:8px;padding:10px;font-weight:700}
+
+/* // =========================
+   // MODAL / TOAST
+   // ========================= */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(22,34,29,.42);z-index:100;place-items:center;padding:20px}
+.modal-backdrop.show{display:grid}
+.modal{width:min(520px,100%);background:#fff;border-radius:15px;box-shadow:0 20px 70px rgba(0,0,0,.18);padding:22px}
+.modal h3{font-family:"Space Grotesk";margin:0 0 7px}.modal p{color:var(--muted);font-size:13px;line-height:1.6}
+.modal textarea{width:100%;min-height:110px;border:1px solid var(--border);border-radius:9px;padding:11px;outline:0;resize:vertical}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.cancel-btn{border:1px solid var(--border);background:#fff;padding:9px 14px;border-radius:8px}
+.primary-btn{border:0;background:var(--green);color:#fff;padding:9px 14px;border-radius:8px;font-weight:700}
+.toast{
+  position:fixed;right:24px;bottom:24px;background:#17221e;color:#fff;padding:12px 16px;
+  border-radius:9px;font-size:13px;box-shadow:var(--shadow);transform:translateY(100px);opacity:0;transition:.25s;z-index:200
+}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* // =========================
+   // RESPONSIVE
+   // ========================= */
+@media(max-width:1100px){
+  .workspace{grid-template-columns:1fr}
+  .side-panel{position:static}
+  .ai-tools{display:grid;grid-template-columns:repeat(2,1fr)}
+  .ai-chat{display:none}
+}
+@media(max-width:800px){
+  .sidebar{width:70px;padding:18px 8px}
+  .brand{justify-content:center;padding:3px 0 22px}
+  .brand-name,.nav-label,.nav-item span,.user-info{display:none}
+  .nav-item{justify-content:center;padding:12px}
+  .user-card{justify-content:center;left:8px;right:8px}
+  .main{margin-left:70px;width:calc(100% - 70px)}
+  .topbar{padding:0 16px}
+  .editor-head,.editor-body{padding-left:16px;padding-right:16px}
+  .document{padding:25px 18px}
+  .export-btn{display:none}
+}
+@media(max-width:550px){
+  .breadcrumb{font-size:11px}.top-actions .icon-btn{display:none}.ai-tools{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<!-- // =========================
+     // SIDEBAR
+     // ========================= -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-logo">S</div>
+    <div class="brand-name">SRS <span>AI</span></div>
+  </div>
+
+  <div class="nav-label">Workspace</div>
+
+  <a class="nav-item" href="dashboard.html"><i data-lucide="layout-dashboard" size="18"></i><span>Dashboard</span></a>
+  <a class="nav-item" href="projects.html"><i data-lucide="folder-kanban" size="18"></i><span>Projects</span></a>
+  <a class="nav-item" href="templates.html"><i data-lucide="files" size="18"></i><span>SRS Templates</span></a>
+  <a class="nav-item active" href="document-editor.html"><i data-lucide="file-pen-line" size="18"></i><span>AI Generator</span></a>
+  <a class="nav-item" href="#"><i data-lucide="file-text" size="18"></i><span>Documents</span></a>
+  <a class="nav-item" href="#"><i data-lucide="list-checks" size="18"></i><span>Requirements</span></a>
+  <a class="nav-item" href="#"><i data-lucide="users" size="18"></i><span>Team</span></a>
+
+  <div class="nav-label" style="margin-top:22px">Account</div>
+  <a class="nav-item" href="#"><i data-lucide="settings" size="18"></i><span>Settings</span></a>
+  <a class="nav-item" href="#"><i data-lucide="circle-help" size="18"></i><span>Help & Support</span></a>
+
+  <div class="user-card">
+    <div class="avatar">AI</div>
+    <div class="user-info"><strong>Alex Johnson</strong><span>alex@example.com</span></div>
+  </div>
+</aside>
+
+<!-- // =========================
+     // MAIN CONTENT
+     // ========================= -->
+<main class="main">
+
+<header class="topbar">
+  <div class="breadcrumb">
+    <span>Projects</span>
+    <i data-lucide="chevron-right" size="14"></i>
+    <span>Food Delivery App</span>
+    <i data-lucide="chevron-right" size="14"></i>
+    <strong>Document Editor</strong>
+  </div>
+
+  <div class="top-actions">
+    <!-- // Undo / Redo -->
+    <button class="icon-btn" onclick="undoEdit()" title="Undo"><i data-lucide="undo-2" size="17"></i></button>
+    <button class="icon-btn" onclick="redoEdit()" title="Redo"><i data-lucide="redo-2" size="17"></i></button>
+
+    <!-- // Export -->
+    <button class="export-btn" onclick="exportDocument()"><i data-lucide="download" size="16"></i>Export</button>
+
+    <!-- // Save -->
+    <button class="save-btn" onclick="saveDocument()"><i data-lucide="save" size="16"></i>Save Changes</button>
+  </div>
+</header>
+
+<section class="editor-head">
+  <div class="eyebrow">Software Requirements Specification</div>
+  <h1 class="editor-title">Food Delivery Application</h1>
+  <div class="editor-meta">
+    <span>◷ Last saved 2 minutes ago</span>
+    <span>⌘ Version 1.4</span>
+    <span>✓ All changes saved</span>
+  </div>
+</section>
+
+<section class="editor-body">
+<div class="workspace">
+
+<!-- // =========================
+     // DOCUMENT EDITOR
+     // ========================= -->
+<div>
+  <div class="toolbar">
+
+    <!-- // Text formatting -->
+    <button class="tool-btn" onclick="formatText('bold')" title="Bold"><i data-lucide="bold" size="17"></i></button>
+    <button class="tool-btn" onclick="formatText('italic')" title="Italic"><i data-lucide="italic" size="17"></i></button>
+    <button class="tool-btn" onclick="formatText('underline')" title="Underline"><i data-lucide="underline" size="17"></i></button>
+
+    <div class="divider"></div>
+
+    <!-- // Headings -->
+    <select class="format-select" onchange="changeHeading(this.value)">
+      <option value="p">Paragraph</option>
+      <option value="h1">Heading 1</option>
+      <option value="h2">Heading 2</option>
+      <option value="h3">Heading 3</option>
+    </select>
+
+    <div class="divider"></div>
+
+    <!-- // Lists and table -->
+    <button class="tool-btn" onclick="formatText('insertUnorderedList')" title="Bullet points"><i data-lucide="list" size="17"></i></button>
+    <button class="tool-btn" onclick="formatText('insertOrderedList')" title="Numbered list"><i data-lucide="list-ordered" size="17"></i></button>
+    <button class="tool-btn" onclick="addTable()" title="Add table"><i data-lucide="table-2" size="17"></i></button>
+
+    <div class="divider"></div>
+
+    <!-- // Add section -->
+    <button class="tool-btn" onclick="addSection()" title="Add section"><i data-lucide="plus" size="17"></i></button>
+  </div>
+
+  <article class="document" id="document">
+
+    <!-- // Section 1 -->
+    <div class="section selected" draggable="true" onclick="selectSection(this)">
+      <div class="section-actions">
+        <button class="mini-btn" onclick="moveSectionUp(event,this)" title="Move up"><i data-lucide="chevron-up" size="15"></i></button>
+        <button class="mini-btn" onclick="moveSectionDown(event,this)" title="Move down"><i data-lucide="chevron-down" size="15"></i></button>
+        <button class="mini-btn delete" onclick="deleteSection(event,this)" title="Delete"><i data-lucide="trash-2" size="14"></i></button>
+      </div>
+      <div contenteditable="true">
+        <h1>Software Requirements Specification</h1>
+        <p><strong>Food Delivery Application</strong></p>
+        <p>This document describes the functional and non-functional requirements for a modern food delivery application.</p>
+      </div>
+    </div>
+
+    <!-- // Section 2 -->
+    <div class="section" draggable="true" onclick="selectSection(this)">
+      <div class="section-actions">
+        <button class="mini-btn" onclick="moveSectionUp(event,this)"><i data-lucide="chevron-up" size="15"></i></button>
+        <button class="mini-btn" onclick="moveSectionDown(event,this)"><i data-lucide="chevron-down" size="15"></i></button>
+        <button class="mini-btn delete" onclick="deleteSection(event,this)"><i data-lucide="trash-2" size="14"></i></button>
+      </div>
+      <div contenteditable="true">
+        <h2>1. Introduction</h2>
+        <p>The Food Delivery Application allows customers to discover restaurants, browse menus, place orders, make payments and track deliveries.</p>
+      </div>
+    </div>
+
+    <!-- // Section 3 -->
+    <div class="section" draggable="true" onclick="selectSection(this)">
+      <div class="section-actions">
+        <button class="mini-btn" onclick="moveSectionUp(event,this)"><i data-lucide="chevron-up" size="15"></i></button>
+        <button class="mini-btn" onclick="moveSectionDown(event,this)"><i data-lucide="chevron-down" size="15"></i></button>
+        <button class="mini-btn delete" onclick="deleteSection(event,this)"><i data-lucide="trash-2" size="14"></i></button>
+      </div>
+      <div contenteditable="true">
+        <h2>2. Functional Requirements</h2>
+        <h3>2.1 User Registration</h3>
+        <p>The system shall allow users to create an account using:</p>
+        <ul>
+          <li>Name and email address</li>
+          <li>Mobile number</li>
+          <li>Password</li>
+          <li>Social login</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- // Section 4 -->
+    <div class="section" draggable="true" onclick="selectSection(this)">
+      <div class="section-actions">
+        <button class="mini-btn" onclick="moveSectionUp(event,this)"><i data-lucide="chevron-up" size="15"></i></button>
+        <button class="mini-btn" onclick="moveSectionDown(event,this)"><i data-lucide="chevron-down" size="15"></i></button>
+        <button class="mini-btn delete" onclick="deleteSection(event,this)"><i data-lucide="trash-2" size="14"></i></button>
+      </div>
+      <div contenteditable="true">
+        <h3>2.2 Restaurant Search</h3>
+        <p>The system shall allow customers to search and filter restaurants based on cuisine, rating, distance and delivery time.</p>
+        <table class="doc-table">
+          <thead><tr><th>Requirement ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+          <tbody>
+            <tr><td>FR-001</td><td>User can search restaurants</td><td>High</td></tr>
+            <tr><td>FR-002</td><td>User can filter restaurants</td><td>Medium</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- // Section 5 -->
+    <div class="section" draggable="true" onclick="selectSection(this)">
+      <div class="section-actions">
+        <button class="mini-btn" onclick="moveSectionUp(event,this)"><i data-lucide="chevron-up" size="15"></i></button>
+        <button class="mini-btn" onclick="moveSectionDown(event,this)"><i data-lucide="chevron-down" size="15"></i></button>
+        <button class="mini-btn delete" onclick="deleteSection(event,this)"><i data-lucide="trash-2" size="14"></i></button>
+      </div>
+      <div contenteditable="true">
+        <h2>3. Non-Functional Requirements</h2>
+        <ul>
+          <li>The application should load within 3 seconds.</li>
+          <li>User data must be securely stored.</li>
+          <li>The system should support mobile and desktop devices.</li>
+          <li>The platform should provide 99.9% availability.</li>
+        </ul>
+      </div>
+    </div>
+
+  </article>
+</div>
+
+<!-- // =========================
+     // AI TOOLS
+     // ========================= -->
+<aside class="side-panel">
+  <div class="panel-header">
+    <div class="ai-icon"><i data-lucide="sparkles" size="18"></i></div>
+    <div><strong>AI Writing Tools</strong><span>Improve your SRS with AI</span></div>
+  </div>
+
+  <div class="ai-tools">
+    <button class="ai-tool" onclick="aiAction('Improve Writing')"><i data-lucide="wand-sparkles" size="16"></i>Improve Writing</button>
+    <button class="ai-tool" onclick="aiAction('Expand')"><i data-lucide="expand" size="16"></i>Expand</button>
+    <button class="ai-tool" onclick="aiAction('Shorten')"><i data-lucide="minimize-2" size="16"></i>Shorten</button>
+    <button class="ai-tool" onclick="aiAction('Rewrite')"><i data-lucide="refresh-cw" size="16"></i>Rewrite</button>
+
+    <div class="ai-divider"></div>
+
+    <button class="ai-tool" onclick="aiAction('Generate Requirement')"><i data-lucide="sparkles" size="16"></i>Generate Requirement</button>
+    <button class="ai-tool" onclick="aiAction('Find Missing Requirements')"><i data-lucide="search-check" size="16"></i>Find Missing Requirements</button>
+  </div>
+
+  <!-- // Ask AI -->
+  <div class="ai-chat">
+    <div class="chat-title">Ask AI about this document</div>
+    <textarea class="chat-input" id="aiQuestion" placeholder="Example: What requirements are missing from this SRS?"></textarea>
+    <button class="ask-btn" onclick="askAI()"><i data-lucide="send" size="14"></i> Ask AI</button>
+  </div>
+</aside>
+
+</div>
+</section>
+</main>
+</div>
+
+<!-- // =========================
+     // AI MODAL
+     // ========================= -->
+<div class="modal-backdrop" id="aiModal">
+  <div class="modal">
+    <h3 id="modalTitle">AI Assistant</h3>
+    <p id="modalDescription">AI result will appear here.</p>
+    <textarea id="aiResult"></textarea>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeModal()">Close</button>
+      <button class="primary-btn" onclick="applyAIResult()">Apply to Document</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* // Initialize icons */
+lucide.createIcons();
+
+let selectedSection=document.querySelector(".section.selected");
+let draggedSection=null;
+
+/* // Select a document section */
+function selectSection(section){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("selected"));
+  section.classList.add("selected");
+  selectedSection=section;
+}
+
+/* // Basic rich-text formatting */
+function formatText(command){
+  document.execCommand(command,false,null);
+}
+
+/* // Convert current selection into a heading */
+function changeHeading(tag){
+  if(!selectedSection)return;
+  const editable=selectedSection.querySelector("[contenteditable='true']");
+  editable.focus();
+  document.execCommand("formatBlock",false,tag);
+}
+
+/* // Add a new editable section */
+function addSection(){
+  const area=document.getElementById("document");
+  const section=document.createElement("div");
+  section.className="section selected";
+  section.draggable=true;
+  section.innerHTML=`
+    <div class="section-actions">
+      <button class="mini-btn" onclick="moveSectionUp(event,this)"><i data-lucide="chevron-up" size="15"></i></button>
+      <button class="mini-btn" onclick="moveSectionDown(event,this)"><i data-lucide="chevron-down" size="15"></i></button>
+      <button class="mini-btn delete" onclick="deleteSection(event,this)"><i data-lucide="trash-2" size="14"></i></button>
+    </div>
+    <div contenteditable="true">
+      <h2>New Section</h2>
+      <p>Start writing your requirement here...</p>
+    </div>`;
+  area.appendChild(section);
+  selectSection(section);
+  lucide.createIcons();
+  section.querySelector("[contenteditable='true']").focus();
+  showToast("New section added");
+}
+
+/* // Delete a section */
+function deleteSection(event,button){
+  event.stopPropagation();
+  const section=button.closest(".section");
+  if(document.querySelectorAll(".section").length<=1){
+    showToast("At least one section is required");
+    return;
+  }
+  section.remove();
+  selectedSection=document.querySelector(".section:last-child");
+  selectedSection.classList.add("selected");
+  showToast("Section deleted");
+}
+
+/* // Move section up */
+function moveSectionUp(event,button){
+  event.stopPropagation();
+  const section=button.closest(".section");
+  const previous=section.previousElementSibling;
+  if(previous){
+    section.parentNode.insertBefore(section,previous);
+    selectSection(section);
+    showToast("Section moved up");
+  }
+}
+
+/* // Move section down */
+function moveSectionDown(event,button){
+  event.stopPropagation();
+  const section=button.closest(".section");
+  const next=section.nextElementSibling;
+  if(next){
+    section.parentNode.insertBefore(next,section);
+    selectSection(section);
+    showToast("Section moved down");
+  }
+}
+
+/* // Add a sample table */
+function addTable(){
+  if(!selectedSection){showToast("Select a section first");return}
+  const editable=selectedSection.querySelector("[contenteditable='true']");
+  editable.focus();
+  editable.insertAdjacentHTML("beforeend",`
+    <table class="doc-table">
+      <thead><tr><th>Requirement ID</th><th>Description</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr><td>FR-003</td><td>Enter requirement</td><td>High</td></tr>
+        <tr><td>FR-004</td><td>Enter requirement</td><td>Medium</td></tr>
+      </tbody>
+    </table>`);
+  showToast("Table added");
+}
+
+/* // Browser undo/redo */
+function undoEdit(){document.execCommand("undo");showToast("Undo")}
+function redoEdit(){document.execCommand("redo");showToast("Redo")}
+
+/* // Save document to browser localStorage */
+function saveDocument(){
+  localStorage.setItem("srsDocument",document.getElementById("document").innerHTML);
+  showToast("Changes saved successfully");
+}
+
+/* // Load previous local save */
+window.addEventListener("load",()=>{
+  const saved=localStorage.getItem("srsDocument");
+  if(saved){
+    document.getElementById("document").innerHTML=saved;
+    document.querySelectorAll(".section").forEach(s=>s.onclick=()=>selectSection(s));
+    selectedSection=document.querySelector(".section");
+    if(selectedSection)selectedSection.classList.add("selected");
+    lucide.createIcons();
+  }
+});
+
+/* // Demo AI actions
+   // Replace these responses with your backend/API later */
+function aiAction(action){
+  const responses={
+    "Improve Writing":"The system shall provide customers with a simple, reliable, and user-friendly interface for discovering restaurants, selecting food items, placing orders, making payments, and tracking deliveries.",
+    "Expand":"The system shall allow registered customers to browse restaurants, view menus, search for food items, add items to their cart, apply offers, select a delivery address, complete payment, receive confirmation, and track delivery status.",
+    "Shorten":"The system shall allow users to browse restaurants, place food orders, make payments, and track deliveries.",
+    "Rewrite":"Users shall be able to discover restaurants, select food items, submit orders, complete payments, and monitor delivery progress.",
+    "Generate Requirement":"FR-005: The system shall send an order confirmation notification to the customer immediately after successful payment.",
+    "Find Missing Requirements":"Potential missing requirements:\n\n1. Password reset\n2. Order cancellation rules\n3. Refund handling\n4. Payment failure handling\n5. Restaurant availability\n6. Delivery partner assignment\n7. Push notifications\n8. Account deletion\n9. Data privacy\n10. Backup and recovery"
+  };
+  document.getElementById("modalTitle").textContent=action;
+  document.getElementById("modalDescription").textContent="AI suggestion for the selected SRS content.";
+  document.getElementById("aiResult").value=responses[action]||"AI generated content.";
+  document.getElementById("aiModal").classList.add("show");
+}
+
+/* // Ask AI using the question entered by the user */
+function askAI(){
+  const question=document.getElementById("aiQuestion").value.trim();
+  if(!question){showToast("Please enter your question");return}
+  document.getElementById("modalTitle").textContent="AI Answer";
+  document.getElementById("modalDescription").textContent="AI reviewed your question based on the current SRS document.";
+  document.getElementById("aiResult").value=
+    "Suggested answer:\n\nThe SRS should clearly define functional requirements, non-functional requirements, error handling, security, performance, and acceptance criteria.\n\nYour question: "+question;
+  document.getElementById("aiModal").classList.add("show");
+}
+
+/* // Apply AI response to selected section */
+function applyAIResult(){
+  if(!selectedSection){closeModal();showToast("Select a section first");return}
+  const result=document.getElementById("aiResult").value;
+  const editable=selectedSection.querySelector("[contenteditable='true']");
+  const p=document.createElement("p");
+  p.textContent=result;
+  editable.appendChild(p);
+  closeModal();
+  showToast("AI result added to document");
+}
+
+/* // Export / print the SRS */
+function exportDocument(){
+  const content=document.getElementById("document").innerHTML;
+  const win=window.open("","_blank");
+  win.document.write(`
+    <!DOCTYPE html><html><head><title>Food Delivery Application - SRS</title>
+    <style>
+      body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;line-height:1.6;color:#222}
+      h1,h2,h3{margin-top:28px}table{width:100%;border-collapse:collapse}
+      th,td{border:1px solid #aaa;padding:9px;text-align:left}th{background:#eee}
+    </style></head><body>${content}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(),500);
+}
+
+/* // Close AI modal */
+function closeModal(){document.getElementById("aiModal").classList.remove("show")}
+document.getElementById("aiModal").addEventListener("click",e=>{
+  if(e.target===e.currentTarget)closeModal();
+});
+
+/* // Toast notification */
+let toastTimer;
+function showToast(message){
+  const toast=document.getElementById("toast");
+  toast.textContent=message;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toast.classList.remove("show"),2500);
+}
+
+/* // Drag and drop section reordering */
+document.addEventListener("dragstart",e=>{
+  if(e.target.classList.contains("section"))draggedSection=e.target;
+});
+document.addEventListener("dragover",e=>e.preventDefault());
+document.addEventListener("drop",e=>{
+  const target=e.target.closest(".section");
+  if(draggedSection&&target&&draggedSection!==target){
+    const area=document.getElementById("document");
+    const rect=target.getBoundingClientRect();
+    if(e.clientY>rect.top+rect.height/2)area.insertBefore(draggedSection,target.nextSibling);
+    else area.insertBefore(draggedSection,target);
+    selectSection(draggedSection);
+    showToast("Sections reordered");
+  }
+  draggedSection=null;
+});
+</script>
+</body>
+</html>
