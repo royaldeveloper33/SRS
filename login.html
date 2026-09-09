@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <!-- =========================================================
+       SRS AI - LOGIN & REGISTER
+       Separate authentication file for VS Code.
+       Save as: auth.html
+       ========================================================= -->
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRS AI - Login & Register</title>
+
+  <!-- Professional icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* =========================================================
+       1. GLOBAL DESIGN
+       ========================================================= */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+    :root {
+      --text: #182329;
+      --muted: #748187;
+      --light-muted: #9aa5a8;
+      --border: #e1e8e6;
+      --background: #f7faf9;
+      --white: #ffffff;
+      --green: #168f70;
+      --green-dark: #0b7358;
+      --green-light: #e5f6f0;
+      --red: #c54c4c;
+      --red-light: #fff4f4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--background);
+      color: var(--text);
+      font-family: "DM Sans", sans-serif;
+    }
+
+    button,
+    input {
+      font-family: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    /* =========================================================
+       2. MAIN AUTHENTICATION LAYOUT
+       ========================================================= */
+    .auth-page {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+    }
+
+    /* =========================================================
+       3. LEFT BRAND PANEL
+       ========================================================= */
+    .brand-panel {
+      position: relative;
+      overflow: hidden;
+      min-height: 100vh;
+      padding: 40px 58px;
+      background: #eef4f2;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Decorative circles */
+    .circle {
+      position: absolute;
+      border: 1px solid #d7e6e1;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .circle-one {
+      width: 430px;
+      height: 430px;
+      right: -210px;
+      top: 90px;
+    }
+
+    .circle-two {
+      width: 580px;
+      height: 580px;
+      left: -360px;
+      bottom: -330px;
+    }
+
+    /* =========================================================
+       4. BRAND LOGO
+       ========================================================= */
+    .brand {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.7px;
+    }
+
+    .brand-mark {
+      width: 31px;
+      height: 31px;
+      border-radius: 8px;
+      background: var(--text);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+    }
+
+    .brand-ai {
+      color: var(--green);
+    }
+
+    /* =========================================================
+       5. LEFT CONTENT
+       ========================================================= */
+    .brand-content {
+      position: relative;
+      z-index: 2;
+      max-width: 520px;
+      margin: auto 0;
+      padding: 70px 0;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 18px;
+      padding: 7px 10px;
+      border: 1px solid #d3e4df;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--green-dark);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+
+    .eyebrow svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    .brand-content h1 {
+      max-width: 500px;
+      margin-bottom: 17px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: clamp(35px, 4vw, 52px);
+      line-height: 1.05;
+      letter-spacing: -2.2px;
+    }
+
+    .brand-content > p {
+      max-width: 455px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    /* =========================================================
+       6. BENEFITS
+       ========================================================= */
+    .benefits {
+      display: grid;
+      gap: 13px;
+      margin-top: 30px;
+    }
+
+    .benefit {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: #536168;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .benefit-icon {
+      width: 29px;
+      height: 29px;
+      border: 1px solid #dce7e4;
+      border-radius: 7px;
+      background: white;
+      color: var(--green);
+      display: grid;
+      place-items: center;
+    }
+
+    .benefit-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .brand-footer {
+      position: relative;
+      z-index: 2;
+      color: var(--light-muted);
+      font-size: 9px;
+    }
+
+    /* =========================================================
+       7. RIGHT AUTH PANEL
+       ========================================================= */
+    .form-panel {
+      min-height: 100vh;
+      padding: 35px 30px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .auth-container {
+      width: min(420px, 100%);
+    }
+
+    /* =========================================================
+       8. LOGIN / REGISTER SWITCH
+       ========================================================= */
+    .auth-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      padding: 3px;
+      margin-bottom: 28px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f7f9f8;
+    }
+
+    .auth-tab {
+      height: 35px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .auth-tab.active {
+      background: white;
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(20, 35, 40, 0.07);
+    }
+
+    /* =========================================================
+       9. AUTH HEADING
+       ========================================================= */
+    .auth-heading {
+      margin-bottom: 24px;
+    }
+
+    .auth-heading h2 {
+      margin-bottom: 7px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 27px;
+      letter-spacing: -1px;
+    }
+
+    .auth-heading p {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    /* =========================================================
+       10. GOOGLE BUTTON
+       ========================================================= */
+    .google-button {
+      width: 100%;
+      height: 43px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: white;
+      color: #3d4b50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .google-button:hover {
+      border-color: #c8d3d0;
+      background: #fafcfb;
+    }
+
+    .google-g {
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #4285f4;
+    }
+
+    /* =========================================================
+       11. DIVIDER
+       ========================================================= */
+    .divider {
+      margin: 21px 0;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: #a0aaad;
+      font-size: 8px;
+      font-weight: 600;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: var(--border);
+    }
+
+    /* =========================================================
+       12. FORM FIELDS
+       ========================================================= */
+    .field {
+      margin-bottom: 15px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      color: #3f4c51;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper > svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 15px;
+      height: 15px;
+      color: #98a3a6;
+      pointer-events: none;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      height: 43px;
+      padding: 0 40px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      outline: none;
+      background: white;
+      color: var(--text);
+      font-size: 11px;
+    }
+
+    .input-wrapper input::placeholder {
+      color: #a5afb1;
+    }
+
+    .input-wrapper input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--green-light);
+    }
+
+    /* =========================================================
+       13. PASSWORD VISIBILITY BUTTON
+       ========================================================= */
+    .password-toggle {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 29px;
+      height: 29px;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: #8b979a;
+      display: grid;
+      place-items: center;
+    }
+
+    .password-toggle:hover {
+      background: #f3f6f5;
+    }
+
+    .password-toggle svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    /* =========================================================
+       14. PASSWORD STRENGTH
+       ========================================================= */
+    .password-strength {
+      display: none;
+      margin-top: 7px;
+    }
+
+    .password-strength.show {
+      display: block;
+    }
+
+    .strength-track {
+      height: 3px;
+      overflow: hidden;
+      border-radius: 5px;
+      background: #edf0ef;
+    }
+
+    .strength-bar {
+      width: 0;
+      height: 100%;
+      border-radius: 5px;
+      background: var(--green);
+      transition: width 0.25s ease;
+    }
+
+    .strength-text {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 8px;
+    }
+
+    /* =========================================================
+       15. FORGOT PASSWORD + REMEMBER
+       ========================================================= */
+    .login-options {
+      margin: 3px 0 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .remember input {
+      width: 13px;
+      height: 13px;
+      accent-color: var(--green);
+    }
+
+    .remember label {
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .forgot-button {
+      border: 0;
+      background: transparent;
+      color: var(--green-dark);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    /* =========================================================
+       16. PRIMARY AUTH BUTTON
+       ========================================================= */
+    .primary-button {
+      width: 100%;
+      height: 44px;
+      border: 0;
+      border-radius: 7px;
+      background: var(--green);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(22, 143, 112, 0.15);
+      transition: 0.2s ease;
+    }
+
+    .primary-button:hover {
+      background: var(--green-dark);
+      transform: translateY(-1px);
+    }
+
+    .primary-button:disabled {
+      opacity: 0.7;
+      cursor: wait;
+      transform: none;
+    }
+
+    .primary-button svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    /* =========================================================
+       17. SWITCH LOGIN / REGISTER LINK
+       ========================================================= */
+    .switch-text {
+      margin-top: 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .switch-text button {
+      border: 0;
+      background: transparent;
+      color: var(--green-dark);
+      font-weight: 700;
+    }
+
+    /* =========================================================
+       18. TERMS
+       ========================================================= */
+    .terms {
+      margin-top: 28px;
+      color: #a0aaad;
+      text-align: center;
+      font-size: 8px;
+      line-height: 1.6;
+    }
+
+    .terms button {
+      border: 0;
+      background: transparent;
+      color: #748187;
+      text-decoration: underline;
+    }
+
+    /* =========================================================
+       19. ERROR MESSAGE
+       ========================================================= */
+    .message {
+      display: none;
+      margin-bottom: 15px;
+      padding: 10px 11px;
+      border-radius: 7px;
+      font-size: 9px;
+      line-height: 1.4;
+    }
+
+    .message.show {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .message.error {
+      border: 1px solid #f0cccc;
+      background: var(--red-light);
+      color: var(--red);
+    }
+
+    .message.success {
+      border: 1px solid #c8e7dc;
+      background: var(--green-light);
+      color: var(--green-dark);
+    }
+
+    .message svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* =========================================================
+       20. TOAST
+       ========================================================= */
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      gap: 7px;
+      padding: 11px 14px;
+      border-radius: 7px;
+      background: var(--text);
+      color: white;
+      font-size: 10px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    /* =========================================================
+       21. RESPONSIVE DESIGN
+       ========================================================= */
+    @media (max-width: 850px) {
+      .auth-page {
+        grid-template-columns: 1fr;
+      }
+
+      .brand-panel {
+        min-height: auto;
+        padding: 27px 25px;
+      }
+
+      .brand-content {
+        margin: 0;
+        padding: 50px 0 35px;
+      }
+
+      .brand-content h1 {
+        font-size: 38px;
+      }
+
+      .brand-footer {
+        padding-top: 8px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .brand-panel {
+        padding: 22px 18px;
+      }
+
+      .brand-content h1 {
+        font-size: 31px;
+      }
+
+      .form-panel {
+        padding: 32px 18px;
+      }
+
+      .login-options {
+        align-items: flex-start;
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =========================================================
+       AUTHENTICATION PAGE
+       ========================================================= -->
+  <div class="auth-page">
+
+    <!-- =======================================================
+         LEFT SIDE BRANDING
+         ======================================================= -->
+    <section class="brand-panel">
+
+      <!-- Decorative background -->
+      <div class="circle circle-one"></div>
+      <div class="circle circle-two"></div>
+
+      <!-- SRS AI Logo -->
+      <div class="brand">
+        <span class="brand-mark">S</span>
+        <span>SRS <span class="brand-ai">AI</span></span>
+      </div>
+
+      <!-- Product message -->
+      <div class="brand-content">
+
+        <div class="eyebrow">
+          <i data-lucide="sparkles"></i>
+          AI-POWERED REQUIREMENTS
+        </div>
+
+        <h1>
+          Build better software requirements, faster.
+        </h1>
+
+        <p>
+          Turn simple client ideas into structured,
+          professional Software Requirements Specification
+          documents with the help of AI.
+        </p>
+
+        <!-- Product benefits -->
+        <div class="benefits">
+
+          <div class="benefit">
+            <span class="benefit-icon">
+              <i data-lucide="zap"></i>
+            </span>
+            Generate professional SRS documents in minutes
+          </div>
+
+          <div class="benefit">
+            <span class="benefit-icon">
+              <i data-lucide="list-checks"></i>
+            </span>
+            Organize functional and non-functional requirements
+          </div>
+
+          <div class="benefit">
+            <span class="benefit-icon">
+              <i data-lucide="users"></i>
+            </span>
+            Collaborate with your software development team
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="brand-footer">
+        © 2026 SRS AI. Professional requirements made simple.
+      </div>
+
+    </section>
+
+    <!-- =======================================================
+         RIGHT SIDE LOGIN / REGISTER
+         ======================================================= -->
+    <section class="form-panel">
+
+      <div class="auth-container">
+
+        <!-- Login / Register tabs -->
+        <div class="auth-tabs">
+
+          <button
+            id="loginTab"
+            class="auth-tab active"
+            type="button"
+            onclick="showLogin()"
+          >
+            Login
+          </button>
+
+          <button
+            id="registerTab"
+            class="auth-tab"
+            type="button"
+            onclick="showRegister()"
+          >
+            Register
+          </button>
+
+        </div>
+
+        <!-- ===================================================
+             LOGIN FORM
+             =================================================== -->
+        <div id="loginView">
+
+          <div class="auth-heading">
+
+            <h2>Welcome back</h2>
+
+            <p>
+              Sign in to continue to your SRS AI workspace.
+            </p>
+
+          </div>
+
+          <!-- Google Login -->
+          <button
+            class="google-button"
+            type="button"
+            onclick="continueWithGoogle()"
+          >
+            <span class="google-g">G</span>
+            Continue with Google
+          </button>
+
+          <!-- Divider -->
+          <div class="divider">
+            OR CONTINUE WITH EMAIL
+          </div>
+
+          <!-- Login message -->
+          <div
+            id="loginMessage"
+            class="message"
+          >
+            <i id="loginMessageIcon"></i>
+            <span id="loginMessageText"></span>
+          </div>
+
+          <form onsubmit="loginUser(event)">
+
+            <!-- Email -->
+            <div class="field">
+
+              <label for="loginEmail">
+                Email
+              </label>
+
+              <div class="input-wrapper">
+
+                <i data-lucide="mail"></i>
+
+                <input
+                  id="loginEmail"
+                  type="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                />
+
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div class="field">
+
+              <label for="loginPassword">
+                Password
+              </label>
+
+              <div class="input-wrapper">
+
+                <i data-lucide="lock-keyhole"></i>
+
+                <input
+                  id="loginPassword"
+                  type="password"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                  required
+                />
+
+                <!-- Password visibility -->
+                <button
+                  type="button"
+                  class="password-toggle"
+                  onclick="togglePassword('loginPassword', 'loginEye')"
+                  aria-label="Show password"
+                >
+                  <i
+                    id="loginEye"
+                    data-lucide="eye"
+                  ></i>
+                </button>
+
+              </div>
+            </div>
+
+            <!-- Remember + Forgot Password -->
+            <div class="login-options">
+
+              <div class="remember">
+
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                />
+
+                <label for="rememberMe">
+                  Remember me
+                </label>
+
+              </div>
+
+              <button
+                type="button"
+                class="forgot-button"
+                onclick="forgotPassword()"
+              >
+                Forgot Password?
+              </button>
+
+            </div>
+
+            <!-- Login -->
+            <button
+              id="loginButton"
+              class="primary-button"
+              type="submit"
+            >
+              <span id="loginButtonText">Login</span>
+              <i
+                id="loginButtonIcon"
+                data-lucide="arrow-right"
+              ></i>
+            </button>
+
+          </form>
+
+          <!-- Register link -->
+          <div class="switch-text">
+
+            Don't have an account?
+
+            <button
+              type="button"
+              onclick="showRegister()"
+            >
+              Register
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- ===================================================
+             REGISTER FORM
+             =================================================== -->
+        <div
+          id="registerView"
+          style="display:none;"
+        >
+
+          <div class="auth-heading">
+
+            <h2>Create your account</h2>
+
+            <p>
+              Start creating professional SRS documents with AI.
+            </p>
+
+          </div>
+
+          <!-- Google Register -->
+          <button
+            class="google-button"
+            type="button"
+            onclick="continueWithGoogle()"
+          >
+            <span class="google-g">G</span>
+            Continue with Google
+          </button>
+
+          <!-- Divider -->
+          <div class="divider">
+            OR REGISTER WITH EMAIL
+          </div>
+
+          <!-- Register message -->
+          <div
+            id="registerMessage"
+            class="message"
+          >
+            <i id="registerMessageIcon"></i>
+            <span id="registerMessageText"></span>
+          </div>
+
+          <form onsubmit="registerUser(event)">
+
+            <!-- Full Name -->
+            <div class="field">
+
+              <label for="fullName">
+                Full Name
+              </label>
+
+              <div class="input-wrapper">
+
+                <i data-lucide="user"></i>
+
+                <input
+                  id="fullName"
+                  type="text"
+                  placeholder="Enter your full name"
+                  autocomplete="name"
+                  minlength="2"
+                  required
+                />
+
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div class="field">
+
+              <label for="registerEmail">
+                Email
+              </label>
+
+              <div class="input-wrapper">
+
+                <i data-lucide="mail"></i>
+
+                <input
+                  id="registerEmail"
+                  type="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                />
+
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div class="field">
+
+              <label for="registerPassword">
+                Password
+              </label>
+
+              <div class="input-wrapper">
+
+                <i data-lucide="lock-keyhole"></i>
+
+                <input
+                  id="registerPassword"
+                  type="password"
+                  placeholder="Create a password"
+                  autocomplete="new-password"
+                  minlength="8"
+                  oninput="checkPasswordStrength()"
+                  required
+                />
+
+                <button
+                  type="button"
+                  class="password-toggle"
+                  onclick="togglePassword('registerPassword', 'registerEye')"
+                  aria-label="Show password"
+                >
+                  <i
+                    id="registerEye"
+                    data-lucide="eye"
+                  ></i>
+                </button>
+
+              </div>
+
+              <!-- Password strength -->
+              <div
+                id="passwordStrength"
+                class="password-strength"
+              >
+
+                <div class="strength-track">
+                  <div
+                    id="strengthBar"
+                    class="strength-bar"
+                  ></div>
+                </div>
+
+                <span
+                  id="strengthText"
+                  class="strength-text"
+                >
+                  Password strength
+                </span>
+
+              </div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="field">
+
+              <label for="confirmPassword">
+                Confirm Password
+              </label>
+
+              <div class="input-wrapper">
+
+                <i data-lucide="shield-check"></i>
+
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Confirm your password"
+                  autocomplete="new-password"
+                  minlength="8"
+                  required
+                />
+
+                <button
+                  type="button"
+                  class="password-toggle"
+                  onclick="togglePassword('confirmPassword', 'confirmEye')"
+                  aria-label="Show password"
+                >
+                  <i
+                    id="confirmEye"
+                    data-lucide="eye"
+                  ></i>
+                </button>
+
+              </div>
+            </div>
+
+            <!-- Create account -->
+            <button
+              id="registerButton"
+              class="primary-button"
+              type="submit"
+            >
+              <span id="registerButtonText">
+                Create Account
+              </span>
+
+              <i
+                id="registerButtonIcon"
+                data-lucide="arrow-right"
+              ></i>
+            </button>
+
+          </form>
+
+          <!-- Login link -->
+          <div class="switch-text">
+
+            Already have an account?
+
+            <button
+              type="button"
+              onclick="showLogin()"
+            >
+              Login
+            </button>
+
+          </div>
+
+        </div>
+
+        <!-- Terms -->
+        <div class="terms">
+
+          By continuing, you agree to our
+
+          <button onclick="showToast('Terms of Service')">
+            Terms of Service
+          </button>
+
+          and
+
+          <button onclick="showToast('Privacy Policy')">
+            Privacy Policy
+          </button>.
+
+        </div>
+
+      </div>
+
+    </section>
+  </div>
+
+  <!-- =========================================================
+       TOAST
+       ========================================================= -->
+  <div id="toast" class="toast">
+
+    <i data-lucide="check-circle-2"></i>
+
+    <span id="toastText"></span>
+
+  </div>
+
+
+  <script>
+    /* =========================================================
+       1. INITIALIZE ICONS
+       ========================================================= */
+    lucide.createIcons();
+
+
+    /* =========================================================
+       2. SHOW LOGIN SCREEN
+       ========================================================= */
+    function showLogin() {
+
+      /* Show login */
+      document.getElementById("loginView").style.display = "block";
+
+      /* Hide register */
+      document.getElementById("registerView").style.display = "none";
+
+      /* Active login tab */
+      document
+        .getElementById("loginTab")
+        .classList.add("active");
+
+      /* Remove active register tab */
+      document
+        .getElementById("registerTab")
+        .classList.remove("active");
+
+      /* Clear old messages */
+      hideMessage("loginMessage");
+      hideMessage("registerMessage");
+
+      /* Refresh icons */
+      lucide.createIcons();
+    }
+
+
+    /* =========================================================
+       3. SHOW REGISTER SCREEN
+       ========================================================= */
+    function showRegister() {
+
+      /* Hide login */
+      document.getElementById("loginView").style.display = "none";
+
+      /* Show register */
+      document.getElementById("registerView").style.display = "block";
+
+      /* Active register tab */
+      document
+        .getElementById("registerTab")
+        .classList.add("active");
+
+      /* Remove active login tab */
+      document
+        .getElementById("loginTab")
+        .classList.remove("active");
+
+      /* Clear old messages */
+      hideMessage("loginMessage");
+      hideMessage("registerMessage");
+
+      /* Refresh icons */
+      lucide.createIcons();
+    }
+
+
+    /* =========================================================
+       4. LOGIN FORM VALIDATION + LOADING
+       ---------------------------------------------------------
+       This function currently simulates authentication.
+
+       Connect your backend API here later.
+
+       Example:
+
+       fetch("/api/login", {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json"
+         },
+         body: JSON.stringify({
+           email: email,
+           password: password
+         })
+       });
+       ========================================================= */
+    function loginUser(event) {
+
+      event.preventDefault();
+
+      const email =
+        document.getElementById("loginEmail").value.trim();
+
+      const password =
+        document.getElementById("loginPassword").value;
+
+      /* Validate email */
+      if (!email) {
+        showMessage(
+          "loginMessage",
+          "error",
+          "Please enter your email address."
+        );
+        return;
+      }
+
+      /* Validate password */
+      if (!password) {
+        showMessage(
+          "loginMessage",
+          "error",
+          "Please enter your password."
+        );
+        return;
+      }
+
+      /* Password minimum validation */
+      if (password.length < 6) {
+        showMessage(
+          "loginMessage",
+          "error",
+          "Password must contain at least 6 characters."
+        );
+        return;
+      }
+
+      /* Get login button */
+      const button =
+        document.getElementById("loginButton");
+
+      const text =
+        document.getElementById("loginButtonText");
+
+      const icon =
+        document.getElementById("loginButtonIcon");
+
+      /* Loading state */
+      button.disabled = true;
+
+      text.textContent = "Logging in...";
+
+      icon.setAttribute(
+        "data-lucide",
+        "loader-circle"
+      );
+
+      lucide.createIcons();
+
+      /*
+        Simulated server response.
+
+        Replace this setTimeout with your real backend call.
+      */
+      setTimeout(function() {
+
+        button.disabled = false;
+
+        text.textContent = "Login";
+
+        icon.setAttribute(
+          "data-lucide",
+          "arrow-right"
+        );
+
+        lucide.createIcons();
+
+        /*
+          Success message.
+
+          When backend is connected, redirect to:
+
+          window.location.href = "dashboard.html";
+        */
+        showMessage(
+          "loginMessage",
+          "success",
+          "Login successful. Welcome back!"
+        );
+
+      }, 1200);
+    }
+
+
+    /* =========================================================
+       5. REGISTER FORM VALIDATION + LOADING
+       ========================================================= */
+    function registerUser(event) {
+
+      event.preventDefault();
+
+      const fullName =
+        document.getElementById("fullName").value.trim();
+
+      const email =
+        document.getElementById("registerEmail").value.trim();
+
+      const password =
+        document.getElementById("registerPassword").value;
+
+      const confirmPassword =
+        document.getElementById("confirmPassword").value;
+
+      /* Validate full name */
+      if (fullName.length < 2) {
+
+        showMessage(
+          "registerMessage",
+          "error",
+          "Please enter your full name."
+        );
+
+        return;
+      }
+
+      /* Validate email */
+      if (!email) {
+
+        showMessage(
+          "registerMessage",
+          "error",
+          "Please enter a valid email address."
+        );
+
+        return;
+      }
+
+      /* Validate password */
+      if (password.length < 8) {
+
+        showMessage(
+          "registerMessage",
+          "error",
+          "Password must contain at least 8 characters."
+        );
+
+        return;
+      }
+
+      /* Check password confirmation */
+      if (password !== confirmPassword) {
+
+        showMessage(
+          "registerMessage",
+          "error",
+          "Passwords do not match."
+        );
+
+        return;
+      }
+
+      /* Get register button */
+      const button =
+        document.getElementById("registerButton");
+
+      const text =
+        document.getElementById("registerButtonText");
+
+      const icon =
+        document.getElementById("registerButtonIcon");
+
+      /* Loading state */
+      button.disabled = true;
+
+      text.textContent = "Creating account...";
+
+      icon.setAttribute(
+        "data-lucide",
+        "loader-circle"
+      );
+
+      lucide.createIcons();
+
+      /*
+        Simulate registration request.
+
+        Replace with your backend API later.
+      */
+      setTimeout(function() {
+
+        button.disabled = false;
+
+        text.textContent = "Create Account";
+
+        icon.setAttribute(
+          "data-lucide",
+          "arrow-right"
+        );
+
+        lucide.createIcons();
+
+        /* Success message */
+        showMessage(
+          "registerMessage",
+          "success",
+          "Account created successfully!"
+        );
+
+        /*
+          After backend integration you can redirect:
+
+          window.location.href = "dashboard.html";
+        */
+
+      }, 1400);
+    }
+
+
+    /* =========================================================
+       6. PASSWORD VISIBILITY TOGGLE
+       ========================================================= */
+    function togglePassword(inputId, iconId) {
+
+      const input =
+        document.getElementById(inputId);
+
+      const icon =
+        document.getElementById(iconId);
+
+      /* Change password to visible */
+      if (input.type === "password") {
+
+        input.type = "text";
+
+        icon.setAttribute(
+          "data-lucide",
+          "eye-off"
+        );
+
+      }
+
+      /* Change password back to hidden */
+      else {
+
+        input.type = "password";
+
+        icon.setAttribute(
+          "data-lucide",
+          "eye"
+        );
+      }
+
+      lucide.createIcons();
+    }
+
+
+    /* =========================================================
+       7. PASSWORD STRENGTH CHECK
+       ========================================================= */
+    function checkPasswordStrength() {
+
+      const password =
+        document.getElementById("registerPassword").value;
+
+      const strengthBox =
+        document.getElementById("passwordStrength");
+
+      const bar =
+        document.getElementById("strengthBar");
+
+      const text =
+        document.getElementById("strengthText");
+
+      /* Hide when empty */
+      if (!password) {
+
+        strengthBox.classList.remove("show");
+
+        return;
+      }
+
+      strengthBox.classList.add("show");
+
+      let score = 0;
+
+      /* Length check */
+      if (password.length >= 8) {
+        score++;
+      }
+
+      /* Lowercase check */
+      if (/[a-z]/.test(password)) {
+        score++;
+      }
+
+      /* Uppercase check */
+      if (/[A-Z]/.test(password)) {
+        score++;
+      }
+
+      /* Number check */
+      if (/[0-9]/.test(password)) {
+        score++;
+      }
+
+      /* Special character check */
+      if (/[^A-Za-z0-9]/.test(password)) {
+        score++;
+      }
+
+      /* Update progress */
+      bar.style.width = (score * 20) + "%";
+
+      /* Update text */
+      if (score <= 2) {
+        text.textContent = "Weak password";
+      } else if (score <= 3) {
+        text.textContent = "Medium password";
+      } else {
+        text.textContent = "Strong password";
+      }
+    }
+
+
+    /* =========================================================
+       8. FORGOT PASSWORD
+       ========================================================= */
+    function forgotPassword() {
+
+      const email =
+        document.getElementById("loginEmail").value.trim();
+
+      if (!email) {
+
+        showMessage(
+          "loginMessage",
+          "error",
+          "Enter your email address first."
+        );
+
+        return;
+      }
+
+      showMessage(
+        "loginMessage",
+        "success",
+        "Password reset instructions have been requested."
+      );
+
+      /*
+        Backend example:
+
+        fetch("/api/forgot-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: email
+          })
+        });
+      */
+    }
+
+
+    /* =========================================================
+       9. CONTINUE WITH GOOGLE
+       ========================================================= */
+    function continueWithGoogle() {
+
+      /*
+        This is currently a frontend placeholder.
+
+        Later connect this button with:
+
+        - Google OAuth
+        - Firebase Authentication
+        - Supabase Auth
+        - Your own backend authentication
+      */
+
+      showToast(
+        "Google authentication will be connected to your backend."
+      );
+    }
+
+
+    /* =========================================================
+       10. SHOW ERROR / SUCCESS MESSAGE
+       ========================================================= */
+    function showMessage(elementId, type, message) {
+
+      const box =
+        document.getElementById(elementId);
+
+      const text =
+        box.querySelector("span");
+
+      const icon =
+        box.querySelector("i");
+
+      /* Set message */
+      text.textContent = message;
+
+      /* Set type */
+      box.classList.remove("error", "success");
+
+      box.classList.add(type);
+
+      /* Select icon */
+      if (type === "error") {
+
+        icon.setAttribute(
+          "data-lucide",
+          "circle-alert"
+        );
+
+      } else {
+
+        icon.setAttribute(
+          "data-lucide",
+          "circle-check"
+        );
+      }
+
+      /* Show message */
+      box.classList.add("show");
+
+      /* Refresh icon */
+      lucide.createIcons();
+    }
+
+
+    /* =========================================================
+       11. HIDE MESSAGE
+       ========================================================= */
+    function hideMessage(elementId) {
+
+      document
+        .getElementById(elementId)
+        .classList.remove("show");
+    }
+
+
+    /* =========================================================
+       12. TOAST MESSAGE
+       ========================================================= */
+    let toastTimer;
+
+    function showToast(message) {
+
+      const toast =
+        document.getElementById("toast");
+
+      const text =
+        document.getElementById("toastText");
+
+      text.textContent = message;
+
+      toast.style.display = "flex";
+
+      clearTimeout(toastTimer);
+
+      toastTimer = setTimeout(function() {
+
+        toast.style.display = "none";
+
+      }, 3000);
+    }
+  </script>
+
+</body>
+</html>
