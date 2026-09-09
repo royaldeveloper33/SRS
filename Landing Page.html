@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRS AI - Dashboard</title>
+
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* =====================================================
+       SRS AI DASHBOARD ONLY
+       Separate file for VS Code: dashboard.html
+       ===================================================== */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+    :root {
+      --ink:#192329; --muted:#708087; --line:#e5eaeb;
+      --paper:#fafcfc; --sidebar:#f3f7f6; --white:#fff;
+      --accent:#1aa67a; --accent-dark:#087859; --accent-soft:#e5f7ef;
+      --blue:#557bd9; --blue-soft:#edf2ff;
+      --amber:#b47912; --amber-soft:#fff4dc;
+    }
+
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:'DM Sans',sans-serif; }
+    button { font:inherit; cursor:pointer; }
+    svg { width:16px; height:16px; }
+
+    /* =====================================================
+       APP LAYOUT
+       ===================================================== */
+    .app { min-height:100vh; display:flex; }
+
+    /* =====================================================
+       LEFT SIDEBAR - same style as reference image
+       ===================================================== */
+    .sidebar {
+      width:250px; min-height:100vh; flex:none;
+      background:var(--sidebar); border-right:1px solid var(--line);
+      padding:25px 14px 16px; display:flex; flex-direction:column;
+    }
+    .brand {
+      display:flex; align-items:center; gap:10px; padding:0 11px 31px;
+      font:700 20px 'Space Grotesk'; letter-spacing:-.7px;
+    }
+    .brand-mark {
+      width:30px; height:30px; border-radius:8px; background:var(--ink);
+      color:#fff; display:grid; place-items:center; font-size:14px;
+    }
+    .brand-ai { color:var(--accent); }
+    .eyebrow {
+      padding:0 12px 10px; color:#99a4a7; font-size:9px;
+      font-weight:700; letter-spacing:1.3px; text-transform:uppercase;
+    }
+    .nav { display:grid; gap:3px; }
+    .nav button {
+      height:41px; width:100%; border:0; border-radius:8px;
+      background:transparent; color:var(--muted); display:flex;
+      align-items:center; gap:12px; padding:0 12px; text-align:left;
+      font-size:12px; font-weight:600;
+    }
+    .nav button:hover,.nav button.active { background:#e4ecea; color:var(--ink); }
+    .nav button.active { box-shadow:inset 3px 0 var(--accent); }
+    .spacer { flex:1; }
+    .profile {
+      margin-top:14px; padding:16px 7px 0; border-top:1px solid var(--line);
+      display:flex; align-items:center; gap:9px;
+    }
+    .avatar {
+      width:33px; height:33px; border-radius:50%; background:#c9dfd8;
+      color:#17624f; display:grid; place-items:center; font-size:10px; font-weight:700;
+    }
+    .profile strong { display:block; font-size:11px; }
+    .profile span { color:var(--muted); font-size:10px; }
+    .profile svg { margin-left:auto; color:#99a4a7; }
+
+    /* =====================================================
+       TOP BAR
+       ===================================================== */
+    .main { flex:1; min-width:0; }
+    .topbar {
+      height:72px; padding:0 40px; background:rgba(255,255,255,.82);
+      border-bottom:1px solid var(--line); display:flex;
+      align-items:center; justify-content:space-between;
+    }
+    .breadcrumb { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; }
+    .breadcrumb b { color:var(--ink); }
+    .top-actions { display:flex; align-items:center; gap:9px; }
+    .icon-btn,.outline-btn {
+      height:36px; border:1px solid var(--line); border-radius:7px;
+      background:#fff; color:var(--muted); display:flex; align-items:center;
+      justify-content:center; gap:7px; font-size:11px; font-weight:600;
+    }
+    .icon-btn { width:36px; }
+    .outline-btn { padding:0 12px; }
+    .icon-btn:hover,.outline-btn:hover { color:var(--ink); border-color:#c0ccca; }
+
+    /* =====================================================
+       DASHBOARD CONTENT
+       ===================================================== */
+    .content { max-width:1420px; margin:auto; padding:40px 40px 70px; }
+    .welcome { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; }
+    .welcome h1 {
+      margin:0 0 8px; font:700 29px 'Space Grotesk'; letter-spacing:-1px;
+    }
+    .welcome p { margin:0; color:var(--muted); font-size:13px; }
+    .primary-btn {
+      height:40px; border:0; border-radius:7px; padding:0 16px;
+      background:var(--accent); color:#fff; display:flex; align-items:center;
+      justify-content:center; gap:8px; font-size:11px; font-weight:700;
+      box-shadow:0 6px 15px rgba(26,166,122,.15);
+    }
+    .primary-btn:hover { background:var(--accent-dark); }
+
+    /* =====================================================
+       STAT CARDS
+       ===================================================== */
+    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin-bottom:36px; }
+    .stat {
+      min-height:112px; padding:18px 19px; border:1px solid var(--line);
+      border-radius:10px; background:#fff;
+    }
+    .stat-top { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; font-weight:600; }
+    .stat-top svg { color:var(--accent); }
+    .stat-number { display:block; margin-top:15px; font:700 29px 'Space Grotesk'; letter-spacing:-1px; }
+    .growth { color:var(--accent-dark); margin-left:8px; font:700 10px 'DM Sans'; }
+
+    /* =====================================================
+       LOWER DASHBOARD
+       ===================================================== */
+    .section-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; }
+    .section-head h2 { margin:0; font:700 17px 'Space Grotesk'; }
+    .view-all { border:0; background:none; color:var(--accent-dark); font-size:11px; font-weight:700; }
+    .dashboard-grid { display:grid; grid-template-columns:minmax(0,1.75fr) minmax(290px,1fr); gap:20px; }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+
+    /* =====================================================
+       RECENT PROJECT TABLE
+       ===================================================== */
+    .project-row {
+      min-height:76px; padding:0 20px; border-top:1px solid #edf0f0;
+      display:grid; grid-template-columns:2.1fr 1fr 1fr 35px;
+      gap:16px; align-items:center;
+    }
+    .project-row.header {
+      min-height:39px; border-top:0; background:#fafbfb; color:#8e999d;
+      text-transform:uppercase; letter-spacing:.8px; font-size:9px; font-weight:700;
+    }
+    .project { display:flex; align-items:center; gap:11px; min-width:0; }
+    .project-icon {
+      width:31px; height:31px; flex:none; border-radius:8px;
+      background:var(--accent-soft); color:var(--accent-dark); display:grid; place-items:center;
+    }
+    .project-icon.blue { background:var(--blue-soft); color:var(--blue); }
+    .project-icon.orange { background:var(--amber-soft); color:var(--amber); }
+    .project-name { display:block; font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .project-type,.date { display:block; margin-top:2px; color:var(--muted); font-size:10px; }
+    .status { display:flex; align-items:center; gap:6px; color:#5d6b70; font-size:10px; font-weight:600; }
+    .dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+    .dot.amber { background:#e1a52b; }
+    .dot.gray { background:#aab5b8; }
+    .more { border:0; background:none; color:#9ba5a8; font-size:19px; }
+
+    /* =====================================================
+       RIGHT SIDE CARDS
+       ===================================================== */
+    .side-stack { display:grid; gap:20px; }
+    .quick,.activity { padding:20px; }
+    .quick h3,.activity h3 { margin:0 0 5px; font:700 15px 'Space Grotesk'; }
+    .quick p { margin:0 0 18px; color:var(--muted); font-size:11px; line-height:1.5; }
+    .quick-action { width:100%; justify-content:flex-start; background:#f5faf8; color:var(--ink); box-shadow:none; }
+    .quick-action svg:first-child { color:var(--accent-dark); }
+    .activity-item { display:flex; gap:10px; margin-bottom:17px; }
+    .activity-item:last-child { margin-bottom:0; }
+    .mini-avatar { width:24px; height:24px; border-radius:50%; background:#d7e9e3; color:#17624f; display:grid; place-items:center; flex:none; font-size:8px; font-weight:700; }
+    .mini-avatar.blue { background:#dfe7fb; color:#526da9; }
+    .activity-text { margin:0; color:var(--muted); font-size:10px; line-height:1.45; }
+    .activity-text b { color:var(--ink); }
+    .activity-time { display:block; margin-top:3px; color:#a2abad; font-size:9px; }
+
+    /* =====================================================
+       CREATE SRS MODAL - dashboard button is functional
+       ===================================================== */
+    .modal-bg { position:fixed; inset:0; z-index:10; background:rgba(20,30,34,.35); display:none; place-items:center; padding:20px; }
+    .modal-bg.show { display:grid; }
+    .modal { width:min(600px,100%); background:#fff; border-radius:12px; padding:27px; box-shadow:0 25px 80px rgba(20,30,34,.22); }
+    .modal-head { display:flex; justify-content:space-between; margin-bottom:22px; }
+    .modal-head h2 { margin:0 0 5px; font:700 21px 'Space Grotesk'; }
+    .modal-head p { margin:0; color:var(--muted); font-size:10px; }
+    .close { border:0; background:none; color:var(--muted); }
+    .field { margin-bottom:17px; }
+    .field label { display:block; margin-bottom:7px; color:#46545a; font-size:10px; font-weight:700; }
+    .field input,.field textarea,.field select { width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:7px; outline:none; background:#fff; color:var(--ink); font-size:11px; }
+    .field textarea { min-height:105px; resize:vertical; line-height:1.5; }
+    .field input:focus,.field textarea:focus,.field select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+    .platforms { display:flex; gap:8px; flex-wrap:wrap; }
+    .platform { padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--muted); font-size:10px; }
+    .platform.selected { background:var(--accent-soft); border-color:#9bd8c3; color:var(--accent-dark); font-weight:700; }
+    .form-footer { display:flex; justify-content:flex-end; gap:8px; padding-top:4px; }
+    .toast { position:fixed; right:25px; bottom:23px; z-index:20; background:var(--ink); color:#fff; padding:12px 15px; border-radius:7px; font-size:10px; display:none; align-items:center; gap:7px; }
+
+    /* =====================================================
+       RESPONSIVE
+       ===================================================== */
+    @media(max-width:1000px) {
+      .sidebar { width:72px; }
+      .brand span:not(.brand-mark),.eyebrow,.nav button span,.profile > div,.profile > svg { display:none; }
+      .nav button { justify-content:center; padding:0; }
+      .profile { justify-content:center; }
+      .content,.topbar { padding-left:23px; padding-right:23px; }
+      .dashboard-grid { grid-template-columns:1fr; }
+    }
+    @media(max-width:700px) {
+      .stats { grid-template-columns:repeat(2,1fr); }
+      .welcome { display:block; }
+      .welcome .primary-button { margin-top:16px; }
+      .project-row { grid-template-columns:1fr 30px; padding:12px 14px; }
+      .project-row > .status,.project-row > .date { display:none; }
+      .project-row.header { display:none; }
+    }
+    @media(max-width:500px) {
+      .stats { grid-template-columns:1fr; }
+      .content { padding:25px 15px 50px; }
+      .topbar { padding:0 15px; }
+      .top-actions .outline-button { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =======================================================
+       APP
+       ======================================================= -->
+  <div class="app">
+
+    <!-- =====================================================
+         SIDEBAR
+         ===================================================== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">S</span>
+        <span>SRS <span class="brand-ai">AI</span></span>
+      </div>
+
+      <div class="eyebrow">Workspace</div>
+
+      <!-- All dashboard navigation items -->
+      <nav class="nav">
+        <button class="nav-button active" onclick="showToast('Dashboard opened')"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
+        <button class="nav-button" onclick="showToast('Projects opened')"><i data-lucide="folder-kanban"></i><span>Projects</span></button>
+        <button class="nav-button" onclick="showToast('SRS Templates opened')"><i data-lucide="copy-plus"></i><span>SRS Templates</span></button>
+        <button class="nav-button" onclick="openModal()"><i data-lucide="sparkles"></i><span>AI Generator</span></button>
+        <button class="nav-button" onclick="showToast('Documents opened')"><i data-lucide="file-text"></i><span>Documents</span></button>
+        <button class="nav-button" onclick="showToast('Requirements opened')"><i data-lucide="list-checks"></i><span>Requirements</span></button>
+        <button class="nav-button" onclick="showToast('Team opened')"><i data-lucide="users"></i><span>Team</span></button>
+        <button class="nav-button" onclick="showToast('Settings opened')"><i data-lucide="settings"></i><span>Settings</span></button>
+      </nav>
+
+      <div class="spacer"></div>
+
+      <div class="eyebrow">Support</div>
+      <nav class="nav">
+        <button class="nav-button" onclick="showToast('Help & Support opened')"><i data-lucide="life-buoy"></i><span>Help & Support</span></button>
+      </nav>
+
+      <!-- Profile at bottom -->
+      <div class="profile">
+        <div class="avatar">AM</div>
+        <div>
+          <strong>Alex Morgan</strong>
+          <span>Pro workspace</span>
+        </div>
+        <i data-lucide="chevrons-up-down"></i>
+      </div>
+    </aside>
+
+    <!-- =====================================================
+         MAIN CONTENT
+         ===================================================== -->
+    <main class="main">
+
+      <!-- Top bar -->
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span>Workspace</span>
+          <i data-lucide="chevron-right" style="width:13px;height:13px"></i>
+          <b>Dashboard</b>
+        </div>
+
+        <div class="top-actions">
+          <button class="icon-btn" onclick="showToast('Search is ready')" title="Search"><i data-lucide="search"></i></button>
+          <button class="icon-btn" onclick="showToast('You are all caught up')" title="Notifications"><i data-lucide="bell"></i></button>
+          <button class="outline-btn" onclick="showToast('Invite link copied')"><i data-lucide="user-plus"></i> Invite</button>
+        </div>
+      </header>
+
+      <!-- Dashboard -->
+      <section class="content">
+
+        <!-- Welcome -->
+        <div class="welcome">
+          <div>
+            <h1>Good morning, Alex.</h1>
+            <p>Here is what is happening across your requirements workspace.</p>
+          </div>
+
+          <!-- Main CTA -->
+          <button class="primary-button" onclick="openModal()">
+            <i data-lucide="plus"></i>
+            Create New SRS
+          </button>
+        </div>
+
+        <!-- ===================================================
+             STATISTICS
+             =================================================== -->
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-top"><span>Total projects</span><i data-lucide="layers-3"></i></div>
+            <strong class="stat-number">24 <small class="growth">+12%</small></strong>
+          </div>
+
+          <div class="stat">
+            <div class="stat-top"><span>Completed SRS</span><i data-lucide="circle-check"></i></div>
+            <strong class="stat-number">18 <small class="growth">+8%</small></strong>
+          </div>
+
+          <div class="stat">
+            <div class="stat-top"><span>Drafts</span><i data-lucide="file-pen-line"></i></div>
+            <strong class="stat-number">06</strong>
+          </div>
+
+          <div class="stat">
+            <div class="stat-top"><span>AI generations</span><i data-lucide="sparkles"></i></div>
+            <strong class="stat-number">42 <small class="growth">+24%</small></strong>
+          </div>
+        </div>
+
+        <!-- Recent projects heading -->
+        <div class="section-head">
+          <h2>Recent projects</h2>
+          <button class="view-all" onclick="showToast('All projects opened')">View all projects →</button>
+        </div>
+
+        <div class="dashboard-grid">
+
+          <!-- =================================================
+               RECENT PROJECTS TABLE
+               ================================================= -->
+          <div class="panel">
+            <div class="project-row header">
+              <span>Project</span>
+              <span>Status</span>
+              <span>Last modified</span>
+              <span></span>
+            </div>
+
+            <!-- Project 1 -->
+            <div class="project-row">
+              <div class="project">
+                <div class="project-icon blue"><i data-lucide="heart-pulse"></i></div>
+                <div>
+                  <span class="project-name">MediFlow Patient Portal</span>
+                  <span class="project-type">Healthcare platform</span>
+                </div>
+              </div>
+              <span class="status"><i class="dot amber"></i>In review</span>
+              <span class="date">Today, 10:42 AM</span>
+              <button class="more" onclick="showToast('MediFlow Patient Portal selected')">···</button>
+            </div>
+
+            <!-- Project 2 -->
+            <div class="project-row">
+              <div class="project">
+                <div class="project-icon"><i data-lucide="shopping-bag"></i></div>
+                <div>
+                  <span class="project-name">Nook E-commerce</span>
+                  <span class="project-type">Online marketplace</span>
+                </div>
+              </div>
+              <span class="status"><i class="dot"></i>Approved</span>
+              <span class="date">Yesterday</span>
+              <button class="more" onclick="showToast('Nook E-commerce selected')">···</button>
+            </div>
+
+            <!-- Project 3 -->
+            <div class="project-row">
+              <div class="project">
+                <div class="project-icon orange"><i data-lucide="network"></i></div>
+                <div>
+                  <span class="project-name">Atlas Team CRM</span>
+                  <span class="project-type">Sales workspace</span>
+                </div>
+              </div>
+              <span class="status"><i class="dot gray"></i>Draft</span>
+              <span class="date">Sep 04, 2026</span>
+              <button class="more" onclick="showToast('Atlas Team CRM selected')">···</button>
+            </div>
+
+            <!-- Project 4 -->
+            <div class="project-row">
+              <div class="project">
+                <div class="project-icon"><i data-lucide="package"></i></div>
+                <div>
+                  <span class="project-name">Parcel Pilot</span>
+                  <span class="project-type">Logistics platform</span>
+                </div>
+              </div>
+              <span class="status"><i class="dot"></i>Approved</span>
+              <span class="date">Aug 29, 2026</span>
+              <button class="more" onclick="showToast('Parcel Pilot selected')">···</button>
+            </div>
+          </div>
+
+          <!-- =================================================
+               RIGHT SIDE
+               ================================================= -->
+          <div class="side-stack">
+
+            <!-- Quick action -->
+            <div class="panel quick">
+              <h3>Start something new</h3>
+              <p>Turn a client idea into a clear, review-ready requirements document.</p>
+              <button class="primary-button quick-action" onclick="openModal()">
+                <i data-lucide="sparkles"></i>
+                Generate SRS
+                <i data-lucide="arrow-up-right" style="width:13px"></i>
+              </button>
+            </div>
+
+            <!-- Recent activity -->
+            <div class="panel activity">
+              <h3>Recent activity</h3>
+
+              <div class="activity-item">
+                <div class="mini-avatar">AM</div>
+                <p class="activity-text"><b>You generated</b> a new SRS for MediFlow<span class="activity-time">12 minutes ago</span></p>
+              </div>
+
+              <div class="activity-item">
+                <div class="mini-avatar blue">JL</div>
+                <p class="activity-text"><b>Jamie Lee</b> commented on FR-014<span class="activity-time">Yesterday at 4:20 PM</span></p>
+              </div>
+
+              <div class="activity-item">
+                <div class="mini-avatar">AM</div>
+                <p class="activity-text"><b>You approved</b> Nook E-commerce<span class="activity-time">Sep 05, 2026</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- =========================================================
+       CREATE NEW SRS MODAL
+       ========================================================= -->
+  <div id="createModal" class="modal-bg">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h2>Create a new SRS</h2>
+          <p>Start with the client idea. SRS AI will shape the rest.</p>
+        </div>
+        <button class="close" onclick="closeModal()"><i data-lucide="x"></i></button>
+      </div>
+
+      <form onsubmit="generateSRS(event)">
+        <div class="field">
+          <label>Project Name</label>
+          <input id="projectName" required placeholder="e.g. MediFlow Patient Portal">
+        </div>
+
+        <div class="field">
+          <label>Client Software Idea</label>
+          <textarea id="clientIdea" required placeholder="Describe the client's idea, problem, users and main features..."></textarea>
+        </div>
+
+        <div class="field">
+          <label>Platform</label>
+          <div class="platforms">
+            <button type="button" class="platform selected" onclick="choosePlatform(this)">Web</button>
+            <button type="button" class="platform" onclick="choosePlatform(this)">Android</button>
+            <button type="button" class="platform" onclick="choosePlatform(this)">iOS</button>
+            <button type="button" class="platform" onclick="choosePlatform(this)">Desktop</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Project Type</label>
+          <select>
+            <option>E-commerce</option>
+            <option>Healthcare</option>
+            <option>CRM</option>
+            <option>Education</option>
+            <option>Banking</option>
+            <option>Food Delivery</option>
+            <option>Custom</option>
+          </select>
+        </div>
+
+        <div class="form-footer">
+          <button type="button" class="outline-btn" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="primary-button"><i data-lucide="sparkles"></i>Generate SRS</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast">
+    <i data-lucide="check" style="width:13px"></i>
+    <span id="toastText"></span>
+  </div>
+
+  <script>
+    /* =====================================================
+       JAVASCRIPT - DASHBOARD INTERACTIONS
+       ===================================================== */
+
+    /* Load Lucide icons */
+    lucide.createIcons();
+
+    /* =====================================================
+       OPEN CREATE SRS MODAL
+       ===================================================== */
+    function openModal() {
+      document.getElementById('createModal').classList.add('show');
+      lucide.createIcons();
+    }
+
+    /* =====================================================
+       CLOSE CREATE SRS MODAL
+       ===================================================== */
+    function closeModal() {
+      document.getElementById('createModal').classList.remove('show');
+    }
+
+    /* =====================================================
+       SELECT PLATFORM
+       ===================================================== */
+    function choosePlatform(button) {
+      document.querySelectorAll('.platform').forEach(function(item) {
+        item.classList.remove('selected');
+      });
+      button.classList.add('selected');
+    }
+
+    /* =====================================================
+       CREATE SRS FORM
+       Replace this later with your backend API.
+       ===================================================== */
+    function generateSRS(event) {
+      event.preventDefault();
+
+      const projectName = document.getElementById('projectName').value;
+      const clientIdea = document.getElementById('clientIdea').value;
+
+      if (!projectName || !clientIdea) {
+        showToast('Please complete the required fields');
+        return;
+      }
+
+      /*
+        Later connect this to your backend, for example:
+
+        fetch('/api/generate-srs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectName, clientIdea })
+        });
+      */
+
+      closeModal();
+      showToast('SRS generation started for ' + projectName);
+    }
+
+    /* =====================================================
+       TOAST MESSAGE
+       ===================================================== */
+    let toastTimer;
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const text = document.getElementById('toastText');
+
+      text.textContent = message;
+      toast.style.display = 'flex';
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function() {
+        toast.style.display = 'none';
+      }, 2500);
+    }
+
+    /* =====================================================
+       CLOSE MODAL WHEN CLICKING OUTSIDE
+       ===================================================== */
+    document.getElementById('createModal').addEventListener('click', function(event) {
+      if (event.target === this) closeModal();
+    });
+  </script>
+</body>
+</html>
