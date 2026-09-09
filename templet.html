@@ -1,0 +1,2567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <!-- =========================================================
+       SRS AI - SRS TEMPLATES SCREEN
+       Separate file for VS Code.
+       Save as: templates.html
+
+       Includes:
+       - Template preview section
+       - Popular SRS templates
+       - Search
+       - Category filters
+       - Template preview modal
+       - Use Template action
+       - CTA section
+       - Complete footer
+       ========================================================= -->
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRS AI - Templates</title>
+
+  <!-- Professional icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* =========================================================
+       1. GLOBAL DESIGN
+       ========================================================= */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+    :root {
+      --text: #182329;
+      --muted: #748187;
+      --light-muted: #9aa5a8;
+      --border: #e2e8e6;
+      --background: #f7faf9;
+      --sidebar: #f1f5f4;
+      --white: #ffffff;
+      --green: #168f70;
+      --green-dark: #0b7358;
+      --green-light: #e4f6ef;
+      --blue: #5579d7;
+      --blue-light: #edf2ff;
+      --orange: #b77d17;
+      --orange-light: #fff4dc;
+      --purple: #7658bb;
+      --purple-light: #f1ecfb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--background);
+      color: var(--text);
+      font-family: "DM Sans", sans-serif;
+    }
+
+    button,
+    input {
+      font-family: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    /* =========================================================
+       2. APPLICATION LAYOUT
+       ========================================================= */
+    .app {
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* =========================================================
+       3. SIDEBAR
+       ========================================================= */
+    .sidebar {
+      width: 245px;
+      min-height: 100vh;
+      flex-shrink: 0;
+      padding: 24px 14px 16px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 11px 30px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.7px;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: var(--text);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+    }
+
+    .brand-ai {
+      color: var(--green);
+    }
+
+    .sidebar-title {
+      padding: 0 12px 9px;
+      color: var(--light-muted);
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 3px;
+    }
+
+    .nav-button {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .nav-button:hover,
+    .nav-button.active {
+      background: #e2ebe9;
+      color: var(--text);
+    }
+
+    .nav-button.active {
+      box-shadow: inset 3px 0 var(--green);
+    }
+
+    .nav-button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .sidebar-spacer {
+      flex: 1;
+    }
+
+    .profile {
+      margin-top: 14px;
+      padding: 15px 7px 0;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .avatar {
+      width: 33px;
+      height: 33px;
+      border-radius: 50%;
+      background: #cee3dc;
+      color: #17644f;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .profile-name {
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .profile-plan {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .profile > svg {
+      margin-left: auto;
+      width: 14px;
+      color: var(--light-muted);
+    }
+
+    /* =========================================================
+       4. MAIN CONTENT
+       ========================================================= */
+    .main {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .topbar {
+      height: 70px;
+      padding: 0 38px;
+      background: rgba(255,255,255,0.86);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .breadcrumb strong {
+      color: var(--text);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-button,
+    .outline-button {
+      height: 35px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: white;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .icon-button {
+      width: 35px;
+    }
+
+    .outline-button {
+      padding: 0 11px;
+    }
+
+    .icon-button:hover,
+    .outline-button:hover {
+      color: var(--text);
+      border-color: #c5d0cd;
+    }
+
+    /* =========================================================
+       5. CONTENT WRAPPER
+       ========================================================= */
+    .content {
+      width: 100%;
+      max-width: 1500px;
+      margin: auto;
+      padding: 34px 38px 0;
+    }
+
+    /* =========================================================
+       6. PAGE HEADING
+       ========================================================= */
+    .page-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 25px;
+    }
+
+    .page-heading h1 {
+      margin-bottom: 7px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 29px;
+      letter-spacing: -1px;
+    }
+
+    .page-heading p {
+      max-width: 620px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .primary-button {
+      height: 39px;
+      padding: 0 15px;
+      border: 0;
+      border-radius: 7px;
+      background: var(--green);
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 6px 16px rgba(22,143,112,0.15);
+    }
+
+    .primary-button:hover {
+      background: var(--green-dark);
+    }
+
+    .primary-button svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    /* =========================================================
+       7. SEARCH + CATEGORY FILTERS
+       ========================================================= */
+    .template-toolbar {
+      margin-bottom: 21px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 15px;
+      color: #9aa5a8;
+      pointer-events: none;
+    }
+
+    .search-box input {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px 0 36px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      outline: none;
+      background: white;
+      color: var(--text);
+      font-size: 10px;
+    }
+
+    .search-box input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--green-light);
+    }
+
+    .filter-button {
+      height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: white;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .filter-button.active,
+    .filter-button:hover {
+      border-color: #bdd4cd;
+      background: var(--green-light);
+      color: var(--green-dark);
+    }
+
+    /* =========================================================
+       8. TEMPLATE GRID
+       ========================================================= */
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .template-card {
+      min-width: 0;
+      padding: 17px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: white;
+      transition: 0.2s ease;
+    }
+
+    .template-card:hover {
+      transform: translateY(-2px);
+      border-color: #cad8d4;
+      box-shadow: 0 12px 28px rgba(26,48,43,0.06);
+    }
+
+    .template-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .template-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--green-light);
+      color: var(--green-dark);
+      display: grid;
+      place-items: center;
+    }
+
+    .template-icon.blue {
+      background: var(--blue-light);
+      color: var(--blue);
+    }
+
+    .template-icon.orange {
+      background: var(--orange-light);
+      color: var(--orange);
+    }
+
+    .template-icon.purple {
+      background: var(--purple-light);
+      color: var(--purple);
+    }
+
+    .template-icon svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .popular-badge {
+      padding: 5px 8px;
+      border-radius: 20px;
+      background: #f5f7f6;
+      color: #718077;
+      font-size: 8px;
+      font-weight: 700;
+    }
+
+    .template-card h3 {
+      margin-bottom: 6px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 15px;
+      letter-spacing: -0.3px;
+    }
+
+    .template-card p {
+      min-height: 45px;
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.6;
+    }
+
+    .template-meta {
+      margin-top: 15px;
+      padding-top: 12px;
+      border-top: 1px solid #edf0ef;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .template-sections {
+      color: var(--light-muted);
+      font-size: 8px;
+    }
+
+    .template-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .preview-button {
+      height: 30px;
+      padding: 0 9px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+      color: var(--text);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .preview-button:hover {
+      border-color: #c0ceca;
+      background: #f8faf9;
+    }
+
+    .use-button {
+      height: 30px;
+      padding: 0 10px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--green);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .use-button:hover {
+      background: var(--green-dark);
+    }
+
+    /* =========================================================
+       9. EMPTY STATE
+       ========================================================= */
+    .empty-state {
+      display: none;
+      padding: 55px 20px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: white;
+      text-align: center;
+    }
+
+    .empty-state.show {
+      display: block;
+    }
+
+    .empty-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 13px;
+      border-radius: 11px;
+      background: var(--green-light);
+      color: var(--green-dark);
+      display: grid;
+      place-items: center;
+    }
+
+    .empty-icon svg {
+      width: 21px;
+    }
+
+    .empty-state h3 {
+      margin-bottom: 6px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 16px;
+    }
+
+    .empty-state p {
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    /* =========================================================
+       10. CTA SECTION
+       ========================================================= */
+    .cta {
+      position: relative;
+      overflow: hidden;
+      margin-top: 44px;
+      padding: 43px 35px;
+      border: 1px solid #d5e6e0;
+      border-radius: 12px;
+      background: #edf6f3;
+      text-align: center;
+    }
+
+    .cta-circle {
+      position: absolute;
+      width: 230px;
+      height: 230px;
+      border: 1px solid #d5e6e0;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .cta-circle.left {
+      left: -125px;
+      top: -105px;
+    }
+
+    .cta-circle.right {
+      right: -125px;
+      bottom: -105px;
+    }
+
+    .cta-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta h2 {
+      margin-bottom: 8px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 25px;
+      letter-spacing: -0.8px;
+    }
+
+    .cta p {
+      margin-bottom: 19px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    /* =========================================================
+       11. FOOTER
+       ========================================================= */
+    .footer {
+      margin-top: 42px;
+      padding: 30px 0 24px;
+      border-top: 1px solid var(--border);
+      background: white;
+    }
+
+    .footer-inner {
+      display: grid;
+      grid-template-columns: 1.7fr repeat(3, 1fr);
+      gap: 30px;
+    }
+
+    .footer-brand {
+      max-width: 250px;
+    }
+
+    .footer-brand .brand {
+      padding: 0;
+      margin-bottom: 12px;
+    }
+
+    .footer-brand p {
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.6;
+    }
+
+    .footer-column h4 {
+      margin-bottom: 12px;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .footer-links {
+      display: grid;
+      gap: 8px;
+    }
+
+    .footer-links button,
+    .footer-links a {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      text-decoration: none;
+      text-align: left;
+      font-size: 9px;
+    }
+
+    .footer-links button:hover,
+    .footer-links a:hover {
+      color: var(--green-dark);
+    }
+
+    .socials {
+      display: flex;
+      gap: 6px;
+      margin-top: 13px;
+    }
+
+    .social-button {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+    }
+
+    .social-button:hover {
+      color: var(--green-dark);
+      background: var(--green-light);
+    }
+
+    .social-button svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    .footer-bottom {
+      margin-top: 26px;
+      padding-top: 16px;
+      border-top: 1px solid #edf0ef;
+      color: var(--light-muted);
+      font-size: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* =========================================================
+       12. TEMPLATE PREVIEW MODAL
+       ========================================================= */
+    .modal-background {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      padding: 20px;
+      background: rgba(18,28,32,0.4);
+      display: none;
+      place-items: center;
+    }
+
+    .modal-background.show {
+      display: grid;
+    }
+
+    .modal {
+      width: min(700px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      padding: 24px;
+      border-radius: 11px;
+      background: white;
+      box-shadow: 0 25px 80px rgba(18,28,32,0.25);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .modal-header h2 {
+      margin-bottom: 5px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 20px;
+    }
+
+    .modal-header p {
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .close-button {
+      width: 31px;
+      height: 31px;
+      border: 0;
+      border-radius: 6px;
+      background: #f4f6f5;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+    }
+
+    .close-button:hover {
+      background: #e9eeec;
+      color: var(--text);
+    }
+
+    .preview-layout {
+      display: grid;
+      grid-template-columns: 0.85fr 1.15fr;
+      gap: 18px;
+    }
+
+    .preview-info {
+      padding: 15px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fafcfc;
+    }
+
+    .preview-info h4 {
+      margin-bottom: 10px;
+      font-size: 10px;
+    }
+
+    .preview-info p {
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.6;
+    }
+
+    .section-list {
+      margin-top: 15px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .section-item {
+      padding: 8px 9px;
+      border: 1px solid #e7ecea;
+      border-radius: 6px;
+      background: white;
+      color: #59676b;
+      font-size: 9px;
+    }
+
+    .document-preview {
+      padding: 20px;
+      min-height: 310px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 5px 20px rgba(20,35,40,0.04);
+    }
+
+    .document-preview .doc-title {
+      margin-bottom: 6px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 17px;
+    }
+
+    .document-preview .doc-subtitle {
+      margin-bottom: 20px;
+      color: var(--muted);
+      font-size: 8px;
+    }
+
+    .document-line {
+      height: 7px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      background: #edf1f0;
+    }
+
+    .document-line.short {
+      width: 55%;
+    }
+
+    .document-line.medium {
+      width: 76%;
+    }
+
+    .document-heading {
+      margin: 18px 0 9px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 10px;
+    }
+
+    .modal-footer {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* =========================================================
+       13. TOAST
+       ========================================================= */
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 200;
+      padding: 11px 14px;
+      border-radius: 7px;
+      background: var(--text);
+      color: white;
+      display: none;
+      align-items: center;
+      gap: 7px;
+      font-size: 10px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.18);
+    }
+
+    /* =========================================================
+       14. RESPONSIVE DESIGN
+       ========================================================= */
+    @media (max-width: 1100px) {
+
+      .sidebar {
+        width: 72px;
+      }
+
+      .brand span:not(.brand-mark),
+      .sidebar-title,
+      .nav-button span,
+      .profile > div,
+      .profile > svg {
+        display: none;
+      }
+
+      .nav-button {
+        justify-content: center;
+        padding: 0;
+      }
+
+      .profile {
+        justify-content: center;
+      }
+
+      .content,
+      .topbar {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+
+      .template-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .footer-inner {
+        grid-template-columns: 1.5fr 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 750px) {
+
+      .template-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .template-toolbar {
+        flex-wrap: wrap;
+      }
+
+      .search-box {
+        flex-basis: 100%;
+      }
+
+      .filter-button {
+        flex: 1;
+      }
+
+      .preview-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-inner {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+
+      .content {
+        padding: 25px 16px 0;
+      }
+
+      .page-heading {
+        display: block;
+      }
+
+      .page-heading .primary-button {
+        margin-top: 15px;
+      }
+
+      .top-actions .outline-button {
+        display: none;
+      }
+
+      .footer-inner {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-bottom {
+        display: block;
+        line-height: 1.8;
+      }
+
+      .cta {
+        padding: 35px 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =========================================================
+       APPLICATION
+       ========================================================= -->
+  <div class="app">
+
+    <!-- =======================================================
+         SIDEBAR
+         ======================================================= -->
+    <aside class="sidebar">
+
+      <!-- Logo -->
+      <div class="brand">
+        <span class="brand-mark">S</span>
+        <span>SRS <span class="brand-ai">AI</span></span>
+      </div>
+
+      <div class="sidebar-title">Workspace</div>
+
+      <!-- Main navigation -->
+      <nav class="nav">
+
+        <button
+          class="nav-button"
+          onclick="goTo('dashboard.html')"
+        >
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </button>
+
+        <button
+          class="nav-button"
+          onclick="goTo('projects.html')"
+        >
+          <i data-lucide="folder-kanban"></i>
+          <span>Projects</span>
+        </button>
+
+        <!-- Templates is active -->
+        <button
+          class="nav-button active"
+          onclick="showToast('SRS Templates opened')"
+        >
+          <i data-lucide="copy-plus"></i>
+          <span>SRS Templates</span>
+        </button>
+
+        <button
+          class="nav-button"
+          onclick="showToast('AI Generator opened')"
+        >
+          <i data-lucide="sparkles"></i>
+          <span>AI Generator</span>
+        </button>
+
+        <button
+          class="nav-button"
+          onclick="showToast('Documents opened')"
+        >
+          <i data-lucide="file-text"></i>
+          <span>Documents</span>
+        </button>
+
+        <button
+          class="nav-button"
+          onclick="showToast('Requirements opened')"
+        >
+          <i data-lucide="list-checks"></i>
+          <span>Requirements</span>
+        </button>
+
+        <button
+          class="nav-button"
+          onclick="showToast('Team opened')"
+        >
+          <i data-lucide="users"></i>
+          <span>Team</span>
+        </button>
+
+        <button
+          class="nav-button"
+          onclick="showToast('Settings opened')"
+        >
+          <i data-lucide="settings"></i>
+          <span>Settings</span>
+        </button>
+
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="sidebar-title">Support</div>
+
+      <nav class="nav">
+
+        <button
+          class="nav-button"
+          onclick="showToast('Help & Support opened')"
+        >
+          <i data-lucide="life-buoy"></i>
+          <span>Help & Support</span>
+        </button>
+
+      </nav>
+
+      <!-- User profile -->
+      <div class="profile">
+
+        <div class="avatar">AM</div>
+
+        <div>
+          <div class="profile-name">Alex Morgan</div>
+          <span class="profile-plan">Pro workspace</span>
+        </div>
+
+        <i data-lucide="chevrons-up-down"></i>
+
+      </div>
+
+    </aside>
+
+
+    <!-- =======================================================
+         MAIN CONTENT
+         ======================================================= -->
+    <main class="main">
+
+      <!-- Top bar -->
+      <header class="topbar">
+
+        <div class="breadcrumb">
+          <span>Workspace</span>
+
+          <i
+            data-lucide="chevron-right"
+            style="width:13px;height:13px"
+          ></i>
+
+          <strong>SRS Templates</strong>
+        </div>
+
+        <div class="top-actions">
+
+          <button
+            class="icon-button"
+            onclick="focusSearch()"
+            title="Search templates"
+          >
+            <i data-lucide="search"></i>
+          </button>
+
+          <button
+            class="icon-button"
+            onclick="showToast('No new notifications')"
+            title="Notifications"
+          >
+            <i data-lucide="bell"></i>
+          </button>
+
+          <button
+            class="outline-button"
+            onclick="createCustomTemplate()"
+          >
+            <i data-lucide="plus"></i>
+            Custom Template
+          </button>
+
+        </div>
+
+      </header>
+
+
+      <!-- =====================================================
+           PAGE CONTENT
+           ===================================================== -->
+      <section class="content">
+
+        <!-- Page heading -->
+        <div class="page-heading">
+
+          <div>
+
+            <h1>SRS Templates</h1>
+
+            <p>
+              Start faster with professionally structured
+              Software Requirements Specification templates.
+              Preview a template or use it as the starting point
+              for your next project.
+            </p>
+
+          </div>
+
+          <button
+            class="primary-button"
+            onclick="createCustomTemplate()"
+          >
+            <i data-lucide="plus"></i>
+            Create Custom Template
+          </button>
+
+        </div>
+
+
+        <!-- ===================================================
+             SEARCH + FILTERS
+             =================================================== -->
+        <div class="template-toolbar">
+
+          <div class="search-box">
+
+            <i data-lucide="search"></i>
+
+            <input
+              id="templateSearch"
+              type="search"
+              placeholder="Search SRS templates..."
+              oninput="filterTemplates()"
+            >
+
+          </div>
+
+          <button
+            class="filter-button active"
+            data-category="all"
+            onclick="setCategory('all', this)"
+          >
+            All
+          </button>
+
+          <button
+            class="filter-button"
+            data-category="business"
+            onclick="setCategory('business', this)"
+          >
+            Business
+          </button>
+
+          <button
+            class="filter-button"
+            data-category="healthcare"
+            onclick="setCategory('healthcare', this)"
+          >
+            Healthcare
+          </button>
+
+          <button
+            class="filter-button"
+            data-category="education"
+            onclick="setCategory('education', this)"
+          >
+            Education
+          </button>
+
+          <button
+            class="filter-button"
+            data-category="commerce"
+            onclick="setCategory('commerce', this)"
+          >
+            Commerce
+          </button>
+
+        </div>
+
+
+        <!-- ===================================================
+             POPULAR TEMPLATES
+             =================================================== -->
+        <div
+          id="templateGrid"
+          class="template-grid"
+        >
+
+          <!-- E-commerce -->
+          <article
+            class="template-card"
+            data-category="commerce"
+            data-name="e-commerce"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon">
+                <i data-lucide="shopping-bag"></i>
+              </div>
+
+              <span class="popular-badge">
+                Popular
+              </span>
+
+            </div>
+
+            <h3>E-commerce</h3>
+
+            <p>
+              Complete requirements structure for online
+              stores, product catalogs, carts, checkout,
+              payments and order management.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                14 sections
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('E-commerce', 'commerce')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="useTemplate('E-commerce')"
+                >
+                  Use Template
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <!-- Food Delivery -->
+          <article
+            class="template-card"
+            data-category="commerce"
+            data-name="food delivery"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon orange">
+                <i data-lucide="utensils"></i>
+              </div>
+
+              <span class="popular-badge">
+                Popular
+              </span>
+
+            </div>
+
+            <h3>Food Delivery</h3>
+
+            <p>
+              Structure requirements for customers,
+              restaurants, delivery partners, orders,
+              payments and tracking.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                15 sections
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('Food Delivery', 'commerce')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="useTemplate('Food Delivery')"
+                >
+                  Use Template
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <!-- Hospital Management -->
+          <article
+            class="template-card"
+            data-category="healthcare"
+            data-name="hospital management"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon blue">
+                <i data-lucide="hospital"></i>
+              </div>
+
+              <span class="popular-badge">
+                Popular
+              </span>
+
+            </div>
+
+            <h3>Hospital Management</h3>
+
+            <p>
+              Define requirements for patients, doctors,
+              appointments, medical records, billing and
+              hospital administration.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                16 sections
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('Hospital Management', 'healthcare')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="useTemplate('Hospital Management')"
+                >
+                  Use Template
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <!-- School Management -->
+          <article
+            class="template-card"
+            data-category="education"
+            data-name="school management"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon purple">
+                <i data-lucide="graduation-cap"></i>
+              </div>
+
+              <span class="popular-badge">
+                Popular
+              </span>
+
+            </div>
+
+            <h3>School Management</h3>
+
+            <p>
+              Requirements for students, teachers,
+              attendance, classes, exams, fees and
+              academic administration.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                13 sections
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('School Management', 'education')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="useTemplate('School Management')"
+                >
+                  Use Template
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <!-- Banking -->
+          <article
+            class="template-card"
+            data-category="business"
+            data-name="banking"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon blue">
+                <i data-lucide="landmark"></i>
+              </div>
+
+              <span class="popular-badge">
+                Popular
+              </span>
+
+            </div>
+
+            <h3>Banking</h3>
+
+            <p>
+              A structured SRS starting point for secure
+              banking applications, accounts, transfers,
+              transactions and notifications.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                18 sections
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('Banking', 'business')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="useTemplate('Banking')"
+                >
+                  Use Template
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <!-- Salon Management -->
+          <article
+            class="template-card"
+            data-category="business"
+            data-name="salon management"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon orange">
+                <i data-lucide="scissors"></i>
+              </div>
+
+            </div>
+
+            <h3>Salon Management</h3>
+
+            <p>
+              Requirements for services, staff, customer
+              profiles, appointments, payments and
+              business reporting.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                12 sections
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('Salon Management', 'business')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="useTemplate('Salon Management')"
+                >
+                  Use Template
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <!-- Taxi Booking -->
+          <article
+            class="template-card"
+            data-category="commerce"
+            data-name="taxi booking"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon">
+                <i data-lucide="car-front"></i>
+              </div>
+
+            </div>
+
+            <h3>Taxi Booking</h3>
+
+            <p>
+              Cover riders, drivers, trip booking, live
+              tracking, pricing, payments, ratings and
+              notifications.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                15 sections
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('Taxi Booking', 'commerce')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="useTemplate('Taxi Booking')"
+                >
+                  Use Template
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <!-- CRM -->
+          <article
+            class="template-card"
+            data-category="business"
+            data-name="crm"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon purple">
+                <i data-lucide="users-round"></i>
+              </div>
+
+            </div>
+
+            <h3>CRM</h3>
+
+            <p>
+              Build requirements for leads, contacts,
+              sales pipelines, activities, teams,
+              dashboards and reports.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                14 sections
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('CRM', 'business')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="useTemplate('CRM')"
+                >
+                  Use Template
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <!-- Inventory Management -->
+          <article
+            class="template-card"
+            data-category="business"
+            data-name="inventory management"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon">
+                <i data-lucide="boxes"></i>
+              </div>
+
+            </div>
+
+            <h3>Inventory Management</h3>
+
+            <p>
+              Requirements for products, stock levels,
+              warehouses, purchase orders, suppliers and
+              inventory reports.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                13 sections
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('Inventory Management', 'business')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="useTemplate('Inventory Management')"
+                >
+                  Use Template
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <!-- Custom Template -->
+          <article
+            class="template-card"
+            data-category="all"
+            data-name="custom template"
+          >
+
+            <div class="template-top">
+
+              <div class="template-icon purple">
+                <i data-lucide="file-plus-2"></i>
+              </div>
+
+            </div>
+
+            <h3>Custom Template</h3>
+
+            <p>
+              Start with a flexible SRS structure and
+              customize sections for your own software
+              project or company workflow.
+            </p>
+
+            <div class="template-meta">
+
+              <span class="template-sections">
+                Flexible
+              </span>
+
+              <div class="template-actions">
+
+                <button
+                  class="preview-button"
+                  onclick="previewTemplate('Custom Template', 'business')"
+                >
+                  Preview
+                </button>
+
+                <button
+                  class="use-button"
+                  onclick="createCustomTemplate()"
+                >
+                  Create
+                </button>
+
+              </div>
+
+            </div>
+
+          </article>
+
+        </div>
+
+
+        <!-- ===================================================
+             EMPTY SEARCH STATE
+             =================================================== -->
+        <div
+          id="emptyState"
+          class="empty-state"
+        >
+
+          <div class="empty-icon">
+            <i data-lucide="search-x"></i>
+          </div>
+
+          <h3>No templates found</h3>
+
+          <p>
+            Try another search term or select a different category.
+          </p>
+
+        </div>
+
+
+        <!-- ===================================================
+             CTA SECTION
+             =================================================== -->
+        <section class="cta">
+
+          <div class="cta-circle left"></div>
+          <div class="cta-circle right"></div>
+
+          <div class="cta-content">
+
+            <h2>
+              Ready to create your SRS?
+            </h2>
+
+            <p>
+              Start with a template or let SRS AI generate
+              requirements from your project idea.
+            </p>
+
+            <button
+              class="primary-button"
+              onclick="createSRS()"
+            >
+              <i data-lucide="sparkles"></i>
+              Create Your SRS
+            </button>
+
+          </div>
+
+        </section>
+
+      </section>
+
+
+      <!-- =====================================================
+           FOOTER
+           ===================================================== -->
+      <footer class="footer">
+
+        <div class="content" style="padding-top:0; padding-bottom:0;">
+
+          <div class="footer-inner">
+
+            <!-- About -->
+            <div class="footer-brand">
+
+              <div class="brand">
+
+                <span class="brand-mark">S</span>
+
+                <span>
+                  SRS <span class="brand-ai">AI</span>
+                </span>
+
+              </div>
+
+              <p>
+                AI-powered software requirements generation
+                for developers, teams, companies and students.
+              </p>
+
+              <!-- Social links -->
+              <div class="socials">
+
+                <button
+                  class="social-button"
+                  onclick="socialLink('GitHub')"
+                  title="GitHub"
+                >
+                  <i data-lucide="github"></i>
+                </button>
+
+                <button
+                  class="social-button"
+                  onclick="socialLink('LinkedIn')"
+                  title="LinkedIn"
+                >
+                  <i data-lucide="linkedin"></i>
+                </button>
+
+                <button
+                  class="social-button"
+                  onclick="socialLink('Twitter / X')"
+                  title="Twitter / X"
+                >
+                  <i data-lucide="twitter"></i>
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <!-- Product links -->
+            <div class="footer-column">
+
+              <h4>Product</h4>
+
+              <div class="footer-links">
+
+                <button onclick="showToast('About opened')">
+                  About
+                </button>
+
+                <button onclick="showToast('Features opened')">
+                  Features
+                </button>
+
+                <button onclick="showToast('Templates opened')">
+                  Templates
+                </button>
+
+                <button onclick="showToast('Documentation opened')">
+                  Documentation
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <!-- Company / support -->
+            <div class="footer-column">
+
+              <h4>Company</h4>
+
+              <div class="footer-links">
+
+                <button onclick="showToast('Contact page opened')">
+                  Contact
+                </button>
+
+                <button onclick="showToast('Privacy Policy opened')">
+                  Privacy
+                </button>
+
+                <button onclick="showToast('Terms opened')">
+                  Terms
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <!-- Social -->
+            <div class="footer-column">
+
+              <h4>Connect</h4>
+
+              <div class="footer-links">
+
+                <button onclick="socialLink('GitHub')">
+                  GitHub
+                </button>
+
+                <button onclick="socialLink('LinkedIn')">
+                  LinkedIn
+                </button>
+
+                <button onclick="socialLink('Twitter / X')">
+                  Social links
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div class="footer-bottom">
+
+            <span>
+              © 2026 SRS AI. All rights reserved.
+            </span>
+
+            <span>
+              Built for better software requirements.
+            </span>
+
+          </div>
+
+        </div>
+
+      </footer>
+
+    </main>
+
+  </div>
+
+
+  <!-- =========================================================
+       TEMPLATE PREVIEW MODAL
+       ========================================================= -->
+  <div
+    id="previewModal"
+    class="modal-background"
+  >
+
+    <div class="modal">
+
+      <div class="modal-header">
+
+        <div>
+
+          <h2 id="previewTitle">
+            Template Preview
+          </h2>
+
+          <p id="previewDescription">
+            Preview the SRS template structure.
+          </p>
+
+        </div>
+
+        <button
+          class="close-button"
+          onclick="closePreview()"
+        >
+          <i data-lucide="x"></i>
+        </button>
+
+      </div>
+
+
+      <div class="preview-layout">
+
+        <!-- Template information -->
+        <div class="preview-info">
+
+          <h4>
+            Included SRS Sections
+          </h4>
+
+          <p>
+            This template provides a structured starting
+            point that can be edited and expanded with AI.
+          </p>
+
+          <div
+            id="sectionList"
+            class="section-list"
+          ></div>
+
+        </div>
+
+
+        <!-- Document preview -->
+        <div class="document-preview">
+
+          <div class="doc-title">
+            Software Requirements Specification
+          </div>
+
+          <div
+            id="docTemplateName"
+            class="doc-subtitle"
+          >
+            Template
+          </div>
+
+          <div class="document-line medium"></div>
+          <div class="document-line short"></div>
+
+          <div class="document-heading">
+            1. Introduction
+          </div>
+
+          <div class="document-line"></div>
+          <div class="document-line medium"></div>
+          <div class="document-line short"></div>
+
+          <div class="document-heading">
+            2. Scope
+          </div>
+
+          <div class="document-line"></div>
+          <div class="document-line medium"></div>
+
+          <div class="document-heading">
+            3. Functional Requirements
+          </div>
+
+          <div class="document-line"></div>
+          <div class="document-line medium"></div>
+          <div class="document-line short"></div>
+
+        </div>
+
+      </div>
+
+
+      <div class="modal-footer">
+
+        <button
+          class="outline-button"
+          onclick="closePreview()"
+        >
+          Close
+        </button>
+
+        <button
+          id="modalUseButton"
+          class="primary-button"
+          onclick="usePreviewTemplate()"
+        >
+          <i data-lucide="copy-plus"></i>
+          Use Template
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================================================
+       TOAST
+       ========================================================= -->
+  <div
+    id="toast"
+    class="toast"
+  >
+
+    <i data-lucide="check-circle-2" style="width:14px"></i>
+
+    <span id="toastText"></span>
+
+  </div>
+
+
+  <script>
+    /* =========================================================
+       1. INITIALIZE ICONS
+       ========================================================= */
+
+    lucide.createIcons();
+
+
+    /* =========================================================
+       2. CURRENT CATEGORY
+       ========================================================= */
+
+    let currentCategory = "all";
+
+
+    /* =========================================================
+       3. CURRENT PREVIEW TEMPLATE
+       ========================================================= */
+
+    let currentPreviewTemplate = "";
+
+
+    /* =========================================================
+       4. TEMPLATE SECTIONS
+       ---------------------------------------------------------
+       These sections are displayed inside the preview modal.
+       ========================================================= */
+
+    const templateSections = [
+
+      "Introduction",
+      "Problem Statement",
+      "Objectives",
+      "Scope",
+      "User Roles",
+      "Functional Requirements",
+      "Non-Functional Requirements",
+      "UI Requirements",
+      "Database Requirements",
+      "API Requirements",
+      "Security",
+      "Business Rules",
+      "Acceptance Criteria",
+      "Future Enhancements"
+
+    ];
+
+
+    /* =========================================================
+       5. SEARCH TEMPLATES
+       ========================================================= */
+
+    function filterTemplates() {
+
+      const query =
+        document
+          .getElementById("templateSearch")
+          .value
+          .toLowerCase()
+          .trim();
+
+      const cards =
+        document.querySelectorAll(".template-card");
+
+      let visibleCount = 0;
+
+      cards.forEach(function(card) {
+
+        const name =
+          card.dataset.name.toLowerCase();
+
+        const category =
+          card.dataset.category;
+
+        const matchesSearch =
+          name.includes(query);
+
+        const matchesCategory =
+          currentCategory === "all" ||
+          category === currentCategory ||
+          category === "all";
+
+        if (
+          matchesSearch &&
+          matchesCategory
+        ) {
+
+          card.style.display = "";
+
+          visibleCount++;
+
+        } else {
+
+          card.style.display = "none";
+        }
+      });
+
+      /* Show empty state when no cards match */
+      const empty =
+        document.getElementById("emptyState");
+
+      if (visibleCount === 0) {
+
+        empty.classList.add("show");
+
+      } else {
+
+        empty.classList.remove("show");
+      }
+
+      lucide.createIcons();
+    }
+
+
+    /* =========================================================
+       6. CATEGORY FILTER
+       ========================================================= */
+
+    function setCategory(category, button) {
+
+      currentCategory = category;
+
+      /* Remove active state */
+      document
+        .querySelectorAll(".filter-button")
+        .forEach(function(item) {
+          item.classList.remove("active");
+        });
+
+      /* Activate clicked category */
+      button.classList.add("active");
+
+      filterTemplates();
+    }
+
+
+    /* =========================================================
+       7. PREVIEW TEMPLATE
+       ========================================================= */
+
+    function previewTemplate(name, category) {
+
+      currentPreviewTemplate = name;
+
+      document
+        .getElementById("previewTitle")
+        .textContent = name + " SRS Template";
+
+      document
+        .getElementById("previewDescription")
+        .textContent =
+          "Preview the professional SRS structure for " +
+          name + ".";
+
+      document
+        .getElementById("docTemplateName")
+        .textContent =
+          name + " — Professional SRS Template";
+
+      /* Build section list */
+      const sectionList =
+        document.getElementById("sectionList");
+
+      sectionList.innerHTML = "";
+
+      templateSections.forEach(function(section, index) {
+
+        const item =
+          document.createElement("div");
+
+        item.className = "section-item";
+
+        item.textContent =
+          (index + 1) + ". " + section;
+
+        sectionList.appendChild(item);
+      });
+
+      /* Open modal */
+      document
+        .getElementById("previewModal")
+        .classList.add("show");
+
+      lucide.createIcons();
+    }
+
+
+    /* =========================================================
+       8. CLOSE PREVIEW
+       ========================================================= */
+
+    function closePreview() {
+
+      document
+        .getElementById("previewModal")
+        .classList.remove("show");
+    }
+
+
+    /* =========================================================
+       9. USE TEMPLATE
+       ========================================================= */
+
+    function useTemplate(name) {
+
+      /*
+        In the final application this can redirect to:
+
+        create-srs.html?template=E-commerce
+
+        The template name can then be sent to your backend
+        together with the client's project idea.
+      */
+
+      showToast(
+        name + " template selected"
+      );
+
+      /*
+        Example future navigation:
+
+        window.location.href =
+          "create-srs.html?template=" +
+          encodeURIComponent(name);
+      */
+    }
+
+
+    /* =========================================================
+       10. USE TEMPLATE FROM PREVIEW MODAL
+       ========================================================= */
+
+    function usePreviewTemplate() {
+
+      if (!currentPreviewTemplate) {
+        return;
+      }
+
+      closePreview();
+
+      useTemplate(
+        currentPreviewTemplate
+      );
+    }
+
+
+    /* =========================================================
+       11. CREATE CUSTOM TEMPLATE
+       ========================================================= */
+
+    function createCustomTemplate() {
+
+      /*
+        Future navigation:
+
+        window.location.href =
+          "create-template.html";
+      */
+
+      showToast(
+        "Custom template creator will open here"
+      );
+    }
+
+
+    /* =========================================================
+       12. CREATE YOUR SRS CTA
+       ========================================================= */
+
+    function createSRS() {
+
+      /*
+        Future navigation:
+
+        window.location.href =
+          "create-srs.html";
+      */
+
+      showToast(
+        "Create Your SRS selected"
+      );
+    }
+
+
+    /* =========================================================
+       13. SEARCH FOCUS
+       ========================================================= */
+
+    function focusSearch() {
+
+      const search =
+        document.getElementById("templateSearch");
+
+      search.focus();
+
+      search.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
+
+
+    /* =========================================================
+       14. SIDEBAR NAVIGATION
+       ========================================================= */
+
+    function goTo(page) {
+
+      /*
+        Corresponding files can be placed in the same
+        VS Code project folder:
+
+        dashboard.html
+        projects.html
+        templates.html
+        create-srs.html
+        settings.html
+      */
+
+      window.location.href = page;
+    }
+
+
+    /* =========================================================
+       15. SOCIAL LINKS
+       ========================================================= */
+
+    function socialLink(platform) {
+
+      /*
+        Replace these toast messages with real URLs later.
+
+        Example:
+
+        window.open("https://github.com/yourusername");
+      */
+
+      showToast(
+        platform + " link will be connected here"
+      );
+    }
+
+
+    /* =========================================================
+       16. TOAST MESSAGE
+       ========================================================= */
+
+    let toastTimer;
+
+    function showToast(message) {
+
+      const toast =
+        document.getElementById("toast");
+
+      const text =
+        document.getElementById("toastText");
+
+      text.textContent = message;
+
+      toast.style.display = "flex";
+
+      clearTimeout(toastTimer);
+
+      toastTimer =
+        setTimeout(function() {
+
+          toast.style.display = "none";
+
+        }, 2800);
+    }
+
+
+    /* =========================================================
+       17. CLOSE MODAL WHEN CLICKING OUTSIDE
+       ========================================================= */
+
+    document
+      .getElementById("previewModal")
+      .addEventListener(
+        "click",
+        function(event) {
+
+          if (event.target === this) {
+            closePreview();
+          }
+
+        }
+      );
+
+
+    /* =========================================================
+       18. ESC KEY CLOSES MODAL
+       ========================================================= */
+
+    document.addEventListener(
+      "keydown",
+      function(event) {
+
+        if (event.key === "Escape") {
+          closePreview();
+        }
+
+      }
+    );
+  </script>
+
+</body>
+</html>
