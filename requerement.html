@@ -1,0 +1,2452 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>SRS AI - Generation & Editor</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    background: #f5f7fb;
+    color:#419a97;
+}
+
+/* =========================
+   COMMON
+========================= */
+
+.hidden {
+    display: none !important;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+}
+
+.btn {
+    padding: 11px 18px;
+    border-radius: 9px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.primary {
+    color: white;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+.primary:hover {
+    opacity: .9;
+}
+
+.secondary {
+    background: #eef2f7;
+    color: #334155;
+}
+
+.danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* =========================
+   GENERATION SCREEN
+========================= */
+
+.generation-page {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+}
+
+.generation-card {
+    background: white;
+    width: 100%;
+    max-width: 750px;
+    padding: 45px;
+    border-radius: 22px;
+    box-shadow: 0 15px 45px rgba(0,0,0,.08);
+    text-align: center;
+}
+
+.ai-icon {
+    width: 70px;
+    height: 70px;
+    margin: auto;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: white;
+    background: linear-gradient(135deg,#4f46e5,#9333ea);
+    animation: pulse 1.8s infinite;
+}
+
+@keyframes pulse {
+    0%,100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+}
+
+.generation-card h1 {
+    margin-top: 25px;
+    font-size: 30px;
+}
+
+.generation-card p {
+    color: #419a97;
+    margin-top: 10px;
+}
+
+.steps {
+    margin-top: 40px;
+    text-align: left;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    background: #f8fafc;
+    transition: .3s;
+}
+
+.step-icon {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #e2e8f0;
+}
+
+.step.active {
+    background: #eef2ff;
+}
+
+.step.active .step-icon {
+    background: #419a97;
+    color: white;
+}
+
+.step.completed .step-icon {
+    background: #16a34a;
+    color: white;
+}
+
+.loader {
+    width: 18px;
+    height: 18px;
+    border: 3px solid #ddd;
+    border-top-color: #419a97;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.progress-area {
+    margin-top: 30px;
+}
+
+.progress-track {
+    width: 100%;
+    height: 9px;
+    background: #e2e8f0;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg,#419a97,#9333ea);
+    transition: width .6s ease;
+}
+
+.progress-text {
+    margin-top: 10px;
+    text-align: right;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.generation-actions {
+    margin-top: 30px;
+}
+
+.cancel-btn {
+    color: #64748b;
+    background: transparent;
+}
+
+/* =========================
+   ERROR
+========================= */
+
+.error-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 14px;
+    border-radius: 10px;
+    margin-top: 20px;
+    display: none;
+}
+
+/* =========================
+   SUCCESS
+========================= */
+
+.success-screen {
+    text-align: center;
+}
+
+.success-icon {
+    font-size: 65px;
+}
+
+.success-screen h2 {
+    margin-top: 15px;
+}
+
+.success-screen button {
+    margin-top: 25px;
+}
+
+
+/* =========================
+   EDITOR
+========================= */
+
+.editor-page {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Top bar */
+
+.topbar {
+    height: 64px;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+
+.logo {
+    font-size: 20px;
+    font-weight: bold;
+    color: #419a97;
+}
+
+.document-name {
+    margin-left: 20px;
+    font-size: 14px;
+    color: #64748b;
+}
+
+.top-left {
+    display: flex;
+    align-items: center;
+}
+
+.top-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.save-status {
+    color: #419a97;
+    font-size: 13px;
+    margin-right: 10px;
+}
+
+
+/* Main editor */
+
+.editor-main {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+
+/* Sidebar */
+
+.sidebar {
+    width: 280px;
+    background: white;
+    border-right: 1px solid #e2e8f0;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.sidebar-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #334155;
+}
+
+.toc-item {
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #475569;
+}
+
+.toc-item:hover {
+    background: #f1f5f9;
+}
+
+.toc-item.active {
+    background: #eef2ff;
+    color: #419a97;
+    font-weight: 600;
+}
+
+.add-section {
+    width: 100%;
+    margin-top: 15px;
+}
+
+
+/* Document area */
+
+.document-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 35px;
+}
+
+.document {
+    max-width: 850px;
+    min-height: 1000px;
+    margin: auto;
+    background: white;
+    padding: 60px;
+    box-shadow: 0 5px 25px rgba(0,0,0,.06);
+    border-radius: 8px;
+}
+
+.document h1 {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.document-subtitle {
+    color: #64748b;
+    margin-bottom: 35px;
+}
+
+.section {
+    margin-bottom: 35px;
+    position: relative;
+}
+
+.section h2 {
+    font-size: 21px;
+    margin-bottom: 12px;
+    color: #1e293b;
+}
+
+.section-content {
+    min-height: 50px;
+    padding: 10px;
+    border: 1px dashed transparent;
+    line-height: 1.7;
+    outline: none;
+}
+
+.section-content:hover {
+    border-color: #cbd5e1;
+}
+
+.section-content:focus {
+    border-color: #419a97;
+    background: #fafaff;
+}
+
+.section-actions {
+    position: absolute;
+    right: 0;
+    top: 0;
+    display: none;
+    gap: 5px;
+}
+
+.section:hover .section-actions {
+    display: flex;
+}
+
+.small-btn {
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    font-size: 12px;
+}
+
+.small-btn:hover {
+    background: #e2e8f0;
+}
+
+
+/* =========================
+   TOOLBAR
+========================= */
+
+.toolbar {
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 15px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.tool {
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    font-size: 13px;
+}
+
+.tool:hover {
+    background: #e2e8f0;
+}
+
+
+/* =========================
+   AI PANEL
+========================= */
+
+.ai-panel {
+    width: 300px;
+    background: white;
+    border-left: 1px solid #e2e8f0;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.ai-title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.ai-subtitle {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.ai-tool {
+    width: 100%;
+    text-align: left;
+    padding: 13px;
+    margin-top: 10px;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 600;
+}
+
+.ai-tool:hover {
+    background: #eef2ff;
+    color: #4f46e5;
+}
+
+.ai-chat {
+    margin-top: 25px;
+}
+
+.ai-chat textarea {
+    width: 100%;
+    min-height: 100px;
+    resize: vertical;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    padding: 10px;
+    outline: none;
+}
+
+.ai-chat button {
+    width: 100%;
+    margin-top: 8px;
+}
+
+
+/* =========================
+   TABLE
+========================= */
+
+.srs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+.srs-table th,
+.srs-table td {
+    border: 1px solid #cbd5e1;
+    padding: 10px;
+    text-align: left;
+}
+
+.srs-table th {
+    background: #f1f5f9;
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media(max-width: 1000px) {
+
+    .ai-panel {
+        display: none;
+    }
+
+    .sidebar {
+        width: 220px;
+    }
+
+}
+
+@media(max-width: 700px) {
+
+    .sidebar {
+        display: none;
+    }
+
+    .document-area {
+        padding: 15px;
+    }
+
+    .document {
+        padding: 30px 20px;
+    }
+
+    .topbar {
+        padding: 0 10px;
+    }
+
+    .document-name,
+    .save-status {
+        display: none;
+    }
+
+    .generation-card {
+        padding: 25px 20px;
+    }
+
+}
+
+</style>
+</head>
+
+
+<body>
+
+
+<!-- =====================================================
+     SRS GENERATION SCREEN
+===================================================== -->
+
+<div class="generation-page" id="generationPage">
+
+    <div class="generation-card">
+
+        <div class="ai-icon">
+            ✨
+        </div>
+
+        <h1>Generating Your SRS...</h1>
+
+        <p>
+            AI is transforming your requirements into a professional
+            Software Requirements Specification.
+        </p>
+
+
+        <!-- ERROR -->
+        <div class="error-box" id="errorBox">
+            Something went wrong while generating your SRS.
+        </div>
+
+
+        <!-- STEPS -->
+
+        <div class="steps">
+
+            <div class="step active" id="step1">
+
+                <div class="step-icon">
+                    <div class="loader"></div>
+                </div>
+
+                <span>
+                    Project Analysis
+                </span>
+
+            </div>
+
+
+            <div class="step" id="step2">
+
+                <div class="step-icon">
+                    2
+                </div>
+
+                <span>
+                    Requirements
+                </span>
+
+            </div>
+
+
+            <div class="step" id="step3">
+
+                <div class="step-icon">
+                    3
+                </div>
+
+                <span>
+                    System Design
+                </span>
+
+            </div>
+
+
+            <div class="step" id="step4">
+
+                <div class="step-icon">
+                    4
+                </div>
+
+                <span>
+                    Documentation
+                </span>
+
+            </div>
+
+
+            <div class="step" id="step5">
+
+                <div class="step-icon">
+                    5
+                </div>
+
+                <span>
+                    Final SRS
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- PROGRESS -->
+
+        <div class="progress-area">
+
+            <div class="progress-track">
+
+                <div
+                    class="progress-fill"
+                    id="progressFill">
+                </div>
+
+            </div>
+
+            <div class="progress-text"
+                 id="progressText">
+                0%
+            </div>
+
+        </div>
+
+
+        <!-- ACTIONS -->
+
+        <div class="generation-actions">
+
+            <button
+                class="btn cancel-btn"
+                onclick="cancelGeneration()">
+                Cancel
+            </button>
+
+            <button
+                class="btn primary hidden"
+                id="retryBtn"
+                onclick="retryGeneration()">
+                Retry
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     SUCCESS SCREEN
+===================================================== -->
+
+<div
+    class="generation-page hidden"
+    id="successPage">
+
+    <div class="generation-card success-screen">
+
+        <div class="success-icon">
+            🎉
+        </div>
+
+        <h2>
+            SRS Generated Successfully
+        </h2>
+
+        <p>
+            Your professional Software Requirements Specification
+            is ready to edit.
+        </p>
+
+        <button
+            class="btn primary"
+            onclick="openEditor()">
+
+            📝 Open SRS Editor
+
+        </button>
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     SRS EDITOR
+===================================================== -->
+
+<div
+    class="editor-page hidden"
+    id="editorPage">
+
+
+    <!-- TOP BAR -->
+
+    <div class="topbar">
+
+        <div class="top-left">
+
+            <div class="logo">
+                SRS AI
+            </div>
+
+            <div class="document-name">
+                Software Requirements Specification
+            </div>
+
+        </div>
+
+
+        <div class="top-right">
+
+            <span
+                class="save-status"
+                id="saveStatus">
+                Saved
+            </span>
+
+            <button
+                class="btn secondary"
+                onclick="undoEdit()">
+                ↶ Undo
+            </button>
+
+            <button
+                class="btn secondary"
+                onclick="redoEdit()">
+                ↷ Redo
+            </button>
+
+            <button
+                class="btn primary"
+                onclick="saveDocument()">
+                💾 Save
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- FORMATTING TOOLBAR -->
+
+    <div class="toolbar">
+
+        <button
+            class="tool"
+            onclick="formatText('bold')">
+            <b>B</b>
+        </button>
+
+        <button
+            class="tool"
+            onclick="formatText('italic')">
+            <i>I</i>
+        </button>
+
+        <button
+            class="tool"
+            onclick="formatText('underline')">
+            <u>U</u>
+        </button>
+
+        <button
+            class="tool"
+            onclick="formatText('insertUnorderedList')">
+            • List
+        </button>
+
+        <button
+            class="tool"
+            onclick="formatText('insertOrderedList')">
+            1. List
+        </button>
+
+        <button
+            class="tool"
+            onclick="addTable()">
+            ▦ Table
+        </button>
+
+        <button
+            class="tool"
+            onclick="formatText('justifyLeft')">
+            Left
+        </button>
+
+        <button
+            class="tool"
+            onclick="formatText('justifyCenter')">
+            Center
+        </button>
+
+        <button
+            class="tool"
+            onclick="formatText('justifyRight')">
+            Right
+        </button>
+
+    </div>
+
+
+    <!-- MAIN -->
+
+    <div class="editor-main">
+
+
+        <!-- LEFT TABLE OF CONTENTS -->
+
+        <aside class="sidebar">
+
+            <div class="sidebar-title">
+                SRS TABLE OF CONTENTS
+            </div>
+
+            <div id="toc"></div>
+
+            <button
+                class="btn secondary add-section"
+                onclick="addSection()">
+
+                + Add Section
+
+            </button>
+
+        </aside>
+
+
+        <!-- DOCUMENT -->
+
+        <main class="document-area">
+
+            <div
+                class="document"
+                id="document">
+
+                <h1 contenteditable="true">
+                    Software Requirements Specification
+                </h1>
+
+                <div
+                    class="document-subtitle"
+                    contenteditable="true">
+
+                    Generated by SRS AI
+
+                </div>
+
+
+                <!-- SECTIONS -->
+
+                <div class="section"
+                     id="section-1">
+
+                    <h2>
+                        1. Introduction
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        This document describes the software
+                        requirements for the proposed system.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, -1)">
+                            ↑
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, 1)">
+                            ↓
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-2">
+
+                    <h2>
+                        2. Purpose
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        The purpose of this software is to provide
+                        users with a reliable and efficient solution.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, -1)">
+                            ↑
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, 1)">
+                            ↓
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-3">
+
+                    <h2>
+                        3. Scope
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        The scope of the system includes the major
+                        features, users, services and technical
+                        requirements of the application.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, -1)">
+                            ↑
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, 1)">
+                            ↓
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-4">
+
+                    <h2>
+                        4. Definitions
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        Add important terminology, abbreviations
+                        and definitions used in this project.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, -1)">
+                            ↑
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, 1)">
+                            ↓
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-5">
+
+                    <h2>
+                        5. Overall Description
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        Provide an overall description of the system,
+                        its major components and its operating environment.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, -1)">
+                            ↑
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="moveSection(this, 1)">
+                            ↓
+                        </button>
+
+                        <button
+                            class="small-btn"
+                            onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-6">
+
+                    <h2>
+                        6. User Classes
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        • Administrator<br>
+                        • Registered User<br>
+                        • Guest User
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-7">
+
+                    <h2>
+                        7. Functional Requirements
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        The system shall provide all core functional
+                        features required by the identified users.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-8">
+
+                    <h2>
+                        8. Non-Functional Requirements
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        The system should provide high performance,
+                        reliability, usability and security.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-9">
+
+                    <h2>
+                        9. System Features
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        Describe the major features and capabilities
+                        provided by the system.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-10">
+
+                    <h2>
+                        10. External Interfaces
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        Describe user interfaces, APIs, hardware
+                        interfaces and external software interfaces.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-11">
+
+                    <h2>
+                        11. Database Requirements
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        Define database entities, relationships,
+                        storage requirements and data management.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-12">
+
+                    <h2>
+                        12. Security Requirements
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        The system shall protect user data,
+                        authentication information and sensitive data.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-13">
+
+                    <h2>
+                        13. Performance Requirements
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        Define response time, scalability,
+                        throughput and resource requirements.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-14">
+
+                    <h2>
+                        14. Constraints
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        Describe technical, business, legal and
+                        platform constraints.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-15">
+
+                    <h2>
+                        15. Assumptions
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        List the assumptions made while designing
+                        and developing the system.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="section"
+                     id="section-16">
+
+                    <h2>
+                        16. Future Enhancements
+                    </h2>
+
+                    <div
+                        class="section-content"
+                        contenteditable="true">
+
+                        Describe possible improvements and features
+                        that may be added in future versions.
+
+                    </div>
+
+                    <div class="section-actions">
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,-1)">
+                            ↑
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="moveSection(this,1)">
+                            ↓
+                        </button>
+
+                        <button class="small-btn"
+                                onclick="deleteSection(this)">
+                            🗑
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </main>
+
+
+        <!-- AI TOOLS -->
+
+        <aside class="ai-panel">
+
+            <div class="ai-title">
+                ✨ AI Tools
+            </div>
+
+            <div class="ai-subtitle">
+                Improve your SRS with AI
+            </div>
+
+
+            <button
+                class="ai-tool"
+                onclick="aiAction('Improve Writing')">
+                ✨ Improve Writing
+            </button>
+
+
+            <button
+                class="ai-tool"
+                onclick="aiAction('Expand')">
+                ↗ Expand
+            </button>
+
+
+            <button
+                class="ai-tool"
+                onclick="aiAction('Shorten')">
+                ↘ Shorten
+            </button>
+
+
+            <button
+                class="ai-tool"
+                onclick="aiAction('Rewrite')">
+                🔄 Rewrite
+            </button>
+
+
+            <button
+                class="ai-tool"
+                onclick="aiAction('Generate Requirement')">
+                ⚡ Generate Requirement
+            </button>
+
+
+            <button
+                class="ai-tool"
+                onclick="aiAction('Find Missing Requirements')">
+                🔍 Find Missing Requirements
+            </button>
+
+
+            <div class="ai-chat">
+
+                <strong>
+                    Ask AI
+                </strong>
+
+                <textarea
+                    id="aiQuestion"
+                    placeholder="Ask something about your SRS...">
+                </textarea>
+
+                <button
+                    class="btn primary"
+                    onclick="askAI()">
+
+                    Ask AI ✨
+
+                </button>
+
+            </div>
+
+        </aside>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+/* =====================================================
+   CONFIGURATION
+===================================================== */
+
+const API_URL = "http://localhost:5000";
+
+
+/* =====================================================
+   GENERATION VARIABLES
+===================================================== */
+
+let generationTimer;
+
+let currentStep = 1;
+
+let cancelled = false;
+
+
+/* =====================================================
+   START GENERATION
+===================================================== */
+
+function startGeneration() {
+
+    currentStep = 1;
+
+    cancelled = false;
+
+    document
+        .getElementById("generationPage")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("successPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("editorPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("errorBox")
+        .style.display = "none";
+
+    document
+        .getElementById("retryBtn")
+        .classList.add("hidden");
+
+    resetSteps();
+
+    runGeneration();
+}
+
+
+/* =====================================================
+   GENERATION PROCESS
+===================================================== */
+
+async function runGeneration() {
+
+    try {
+
+        /*
+        Replace this demo section with your real API.
+
+        Example:
+
+        const response = await fetch(
+            `${API_URL}/api/generate-srs`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    projectIdea: projectIdea,
+                    answers: answers
+                })
+            }
+        );
+
+        const data = await response.json();
+        */
+
+
+        for (let i = 1; i <= 5; i++) {
+
+            if (cancelled) {
+                return;
+            }
+
+            currentStep = i;
+
+            activateStep(i);
+
+            updateProgress(i);
+
+            await wait(1300);
+        }
+
+
+        generationComplete();
+
+
+    } catch (error) {
+
+        showGenerationError();
+
+    }
+
+}
+
+
+/* =====================================================
+   WAIT
+===================================================== */
+
+function wait(ms) {
+
+    return new Promise(resolve =>
+        setTimeout(resolve, ms)
+    );
+
+}
+
+
+/* =====================================================
+   UPDATE PROGRESS
+===================================================== */
+
+function updateProgress(step) {
+
+    const percent =
+        ((step - 1) / 4) * 100;
+
+    document
+        .getElementById("progressFill")
+        .style.width =
+        percent + "%";
+
+    document
+        .getElementById("progressText")
+        .innerText =
+        Math.round(percent) + "%";
+
+}
+
+
+/* =====================================================
+   ACTIVATE STEP
+===================================================== */
+
+function activateStep(number) {
+
+    for (let i = 1; i <= 5; i++) {
+
+        const step =
+            document.getElementById("step" + i);
+
+        step.classList.remove("active");
+
+        step.classList.remove("completed");
+
+        const icon =
+            step.querySelector(".step-icon");
+
+        if (i < number) {
+
+            step.classList.add("completed");
+
+            icon.innerHTML = "✓";
+
+        }
+
+        else if (i === number) {
+
+            step.classList.add("active");
+
+            icon.innerHTML =
+                '<div class="loader"></div>';
+
+        }
+
+        else {
+
+            icon.innerHTML = i;
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   RESET STEPS
+===================================================== */
+
+function resetSteps() {
+
+    for (let i = 1; i <= 5; i++) {
+
+        const step =
+            document.getElementById("step" + i);
+
+        step.classList.remove("active");
+
+        step.classList.remove("completed");
+
+        step.querySelector(".step-icon")
+            .innerHTML = i;
+
+    }
+
+}
+
+
+/* =====================================================
+   SUCCESS
+===================================================== */
+
+function generationComplete() {
+
+    document
+        .getElementById("progressFill")
+        .style.width = "100%";
+
+    document
+        .getElementById("progressText")
+        .innerText = "100%";
+
+
+    activateStep(6);
+
+
+    setTimeout(() => {
+
+        document
+            .getElementById("generationPage")
+            .classList.add("hidden");
+
+        document
+            .getElementById("successPage")
+            .classList.remove("hidden");
+
+    }, 500);
+
+}
+
+
+/* =====================================================
+   ERROR
+===================================================== */
+
+function showGenerationError() {
+
+    const error =
+        document.getElementById("errorBox");
+
+    error.style.display = "block";
+
+    error.innerText =
+        "Unable to generate your SRS. Please retry.";
+
+    document
+        .getElementById("retryBtn")
+        .classList.remove("hidden");
+
+}
+
+
+/* =====================================================
+   RETRY
+===================================================== */
+
+function retryGeneration() {
+
+    startGeneration();
+
+}
+
+
+/* =====================================================
+   CANCEL
+===================================================== */
+
+function cancelGeneration() {
+
+    cancelled = true;
+
+    clearInterval(generationTimer);
+
+    alert("SRS generation cancelled.");
+
+    document
+        .getElementById("generationPage")
+        .classList.add("hidden");
+
+}
+
+
+/* =====================================================
+   OPEN EDITOR
+===================================================== */
+
+function openEditor() {
+
+    document
+        .getElementById("successPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("editorPage")
+        .classList.remove("hidden");
+
+    updateTOC();
+
+}
+
+
+/* =====================================================
+   TABLE OF CONTENTS
+===================================================== */
+
+function updateTOC() {
+
+    const toc =
+        document.getElementById("toc");
+
+    const sections =
+        document.querySelectorAll(".section");
+
+    toc.innerHTML = "";
+
+    sections.forEach((section, index) => {
+
+        const heading =
+            section.querySelector("h2");
+
+        const item =
+            document.createElement("div");
+
+        item.className = "toc-item";
+
+        item.innerText =
+            heading.innerText;
+
+        item.onclick = () => {
+
+            section.scrollIntoView({
+                behavior: "smooth"
+            });
+
+        };
+
+        toc.appendChild(item);
+
+    });
+
+}
+
+
+/* =====================================================
+   ADD SECTION
+===================================================== */
+
+function addSection() {
+
+    const documentArea =
+        document.getElementById("document");
+
+    const sections =
+        document.querySelectorAll(".section");
+
+    const number =
+        sections.length + 1;
+
+    const section =
+        document.createElement("div");
+
+    section.className = "section";
+
+    section.innerHTML = `
+
+        <h2>
+            ${number}. New Section
+        </h2>
+
+        <div
+            class="section-content"
+            contenteditable="true">
+
+            Enter your section content here...
+
+        </div>
+
+        <div class="section-actions">
+
+            <button
+                class="small-btn"
+                onclick="moveSection(this,-1)">
+                ↑
+            </button>
+
+            <button
+                class="small-btn"
+                onclick="moveSection(this,1)">
+                ↓
+            </button>
+
+            <button
+                class="small-btn"
+                onclick="deleteSection(this)">
+                🗑
+            </button>
+
+        </div>
+
+    `;
+
+    documentArea.appendChild(section);
+
+    updateTOC();
+
+    section.scrollIntoView({
+        behavior: "smooth"
+    });
+
+}
+
+
+/* =====================================================
+   DELETE SECTION
+===================================================== */
+
+function deleteSection(button) {
+
+    const section =
+        button.closest(".section");
+
+    if (
+        confirm(
+            "Delete this section?"
+        )
+    ) {
+
+        section.remove();
+
+        renumberSections();
+
+        updateTOC();
+
+    }
+
+}
+
+
+/* =====================================================
+   REORDER SECTION
+===================================================== */
+
+function moveSection(button, direction) {
+
+    const section =
+        button.closest(".section");
+
+    if (direction === -1) {
+
+        const previous =
+            section.previousElementSibling;
+
+        if (
+            previous &&
+            previous.classList.contains("section")
+        ) {
+
+            section.parentNode.insertBefore(
+                section,
+                previous
+            );
+
+        }
+
+    }
+
+
+    if (direction === 1) {
+
+        const next =
+            section.nextElementSibling;
+
+        if (
+            next &&
+            next.classList.contains("section")
+        ) {
+
+            section.parentNode.insertBefore(
+                next,
+                section
+            );
+
+        }
+
+    }
+
+
+    renumberSections();
+
+    updateTOC();
+
+}
+
+
+/* =====================================================
+   RENUMBER
+===================================================== */
+
+function renumberSections() {
+
+    const sections =
+        document.querySelectorAll(".section");
+
+    sections.forEach((section, index) => {
+
+        const heading =
+            section.querySelector("h2");
+
+        const title =
+            heading.innerText
+                .replace(/^\d+\.\s*/, "");
+
+        heading.innerText =
+            `${index + 1}. ${title}`;
+
+    });
+
+}
+
+
+/* =====================================================
+   TEXT FORMATTING
+===================================================== */
+
+function formatText(command) {
+
+    document.execCommand(
+        command,
+        false,
+        null
+    );
+
+}
+
+
+/* =====================================================
+   ADD TABLE
+===================================================== */
+
+function addTable() {
+
+    const table = `
+
+        <table class="srs-table">
+
+            <tr>
+                <th>Requirement ID</th>
+                <th>Description</th>
+                <th>Priority</th>
+            </tr>
+
+            <tr>
+                <td>REQ-001</td>
+                <td>Enter requirement</td>
+                <td>High</td>
+            </tr>
+
+            <tr>
+                <td>REQ-002</td>
+                <td>Enter requirement</td>
+                <td>Medium</td>
+            </tr>
+
+        </table>
+
+    `;
+
+
+    document.execCommand(
+        "insertHTML",
+        false,
+        table
+    );
+
+}
+
+
+/* =====================================================
+   SAVE
+===================================================== */
+
+function saveDocument() {
+
+    const content =
+        document.getElementById("document")
+            .innerHTML;
+
+
+    localStorage.setItem(
+        "srsDocument",
+        content
+    );
+
+
+    document
+        .getElementById("saveStatus")
+        .innerText =
+        "Saved ✓";
+
+
+    setTimeout(() => {
+
+        document
+            .getElementById("saveStatus")
+            .innerText =
+            "Saved";
+
+    }, 2000);
+
+}
+
+
+/* =====================================================
+   LOAD SAVED DOCUMENT
+===================================================== */
+
+function loadDocument() {
+
+    const saved =
+        localStorage.getItem(
+            "srsDocument"
+        );
+
+    if (saved) {
+
+        document
+            .getElementById("document")
+            .innerHTML =
+            saved;
+
+        updateTOC();
+
+    }
+
+}
+
+
+/* =====================================================
+   UNDO
+===================================================== */
+
+function undoEdit() {
+
+    document.execCommand(
+        "undo",
+        false,
+        null
+    );
+
+}
+
+
+/* =====================================================
+   REDO
+===================================================== */
+
+function redoEdit() {
+
+    document.execCommand(
+        "redo",
+        false,
+        null
+    );
+
+}
+
+
+/* =====================================================
+   AI ACTIONS
+===================================================== */
+
+async function aiAction(action) {
+
+    alert(
+        `AI Tool Selected: ${action}`
+    );
+
+
+    /*
+    Real backend example:
+
+    const response = await fetch(
+        `${API_URL}/api/ai-edit`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                action: action,
+                content:
+                    document.getElementById("document").innerText
+            })
+        }
+    );
+
+    const data = await response.json();
+
+    // Update editor with data.result
+    */
+
+}
+
+
+/* =====================================================
+   ASK AI
+===================================================== */
+
+async function askAI() {
+
+    const question =
+        document.getElementById("aiQuestion")
+            .value.trim();
+
+
+    if (!question) {
+
+        alert(
+            "Please enter a question."
+        );
+
+        return;
+
+    }
+
+
+    /*
+    Real API:
+
+    POST /api/ask-ai
+
+    {
+        question: "...",
+        document: "..."
+    }
+    */
+
+
+    alert(
+        "AI request: " + question
+    );
+
+}
+
+
+/* =====================================================
+   AUTO SAVE
+===================================================== */
+
+document
+    .getElementById("document")
+    .addEventListener(
+        "input",
+        function() {
+
+            document
+                .getElementById("saveStatus")
+                .innerText =
+                "Unsaved changes";
+
+        }
+    );
+
+
+/* =====================================================
+   INITIALIZATION
+===================================================== */
+
+loadDocument();
+
+
+/*
+Start generation automatically
+for demonstration.
+
+In your real application,
+call startGeneration() after
+receiving the answers from
+the AI Questions screen.
+*/
+
+startGeneration();
+
+</script>
+
+</body>
+</html>
+```
