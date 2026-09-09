@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRS AI - Settings</title>
+
+  <!-- // Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- // Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* // =========================
+       // GLOBAL
+       // ========================= */
+    *{box-sizing:border-box}
+    :root{
+      --green:#19a974;
+      --green-dark:#12845b;
+      --green-light:#eaf9f2;
+      --text:#17221e;
+      --muted:#748079;
+      --border:#e4ebe7;
+      --bg:#f7faf8;
+      --white:#fff;
+      --danger:#df4f4f;
+      --danger-bg:#fff2f2;
+      --shadow:0 8px 28px rgba(24,49,39,.06)
+    }
+
+    body{
+      margin:0;
+      font-family:"DM Sans",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      transition:.25s
+    }
+
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+
+    /* // =========================
+       // DARK THEME
+       // ========================= */
+    body.dark{
+      --text:#edf5f0;
+      --muted:#9eaba4;
+      --border:#293932;
+      --bg:#111916;
+      --white:#18211e;
+      --green-light:#18382c;
+      --shadow:0 8px 28px rgba(0,0,0,.18)
+    }
+
+    /* // =========================
+       // SIDEBAR
+       // ========================= */
+    .app{min-height:100vh;display:flex}
+
+    .sidebar{
+      width:250px;
+      min-height:100vh;
+      background:var(--white);
+      border-right:1px solid var(--border);
+      padding:22px 15px;
+      position:fixed;
+      left:0;
+      top:0;
+      bottom:0;
+      z-index:20
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:11px;
+      padding:4px 10px 25px
+    }
+
+    .brand-logo{
+      width:38px;
+      height:38px;
+      border-radius:11px;
+      background:var(--green);
+      color:#fff;
+      display:grid;
+      place-items:center;
+      font-weight:700;
+      font-family:"Space Grotesk"
+    }
+
+    .brand-name{
+      font-family:"Space Grotesk";
+      font-size:19px;
+      font-weight:700
+    }
+
+    .brand-name span{color:var(--green)}
+
+    .nav-label{
+      color:#9aa59f;
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      padding:0 11px 9px
+    }
+
+    .nav-item{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:11px 12px;
+      margin:3px 0;
+      color:var(--muted);
+      text-decoration:none;
+      border-radius:10px;
+      font-size:14px;
+      transition:.2s
+    }
+
+    .nav-item:hover{
+      background:var(--green-light);
+      color:var(--green-dark)
+    }
+
+    .nav-item.active{
+      background:var(--green-light);
+      color:var(--green-dark);
+      font-weight:700
+    }
+
+    .user-card{
+      position:absolute;
+      bottom:20px;
+      left:15px;
+      right:15px;
+      border-top:1px solid var(--border);
+      padding:17px 8px 0;
+      display:flex;
+      align-items:center;
+      gap:10px
+    }
+
+    .avatar{
+      width:36px;
+      height:36px;
+      border-radius:50%;
+      background:#d9f3e7;
+      color:var(--green-dark);
+      display:grid;
+      place-items:center;
+      font-weight:700;
+      font-size:13px
+    }
+
+    .user-info strong{display:block;font-size:13px}
+    .user-info span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+
+    /* // =========================
+       // MAIN
+       // ========================= */
+    .main{
+      margin-left:250px;
+      width:calc(100% - 250px);
+      min-width:0
+    }
+
+    .topbar{
+      height:67px;
+      background:var(--white);
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 30px;
+      position:sticky;
+      top:0;
+      z-index:10
+    }
+
+    .breadcrumb{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:var(--muted);
+      font-size:13px
+    }
+
+    .breadcrumb strong{color:var(--text)}
+
+    .top-icon{
+      width:38px;
+      height:38px;
+      border:1px solid var(--border);
+      background:var(--white);
+      border-radius:9px;
+      display:grid;
+      place-items:center;
+      color:var(--muted)
+    }
+
+    /* // =========================
+       // SETTINGS HEADER
+       // ========================= */
+    .page{
+      max-width:1100px;
+      margin:auto;
+      padding:32px 30px 60px
+    }
+
+    .page-title{
+      font-family:"Space Grotesk";
+      font-size:29px;
+      margin:0 0 7px
+    }
+
+    .page-subtitle{
+      color:var(--muted);
+      font-size:14px;
+      margin:0 0 28px
+    }
+
+    /* // =========================
+       // SETTINGS CARD
+       // ========================= */
+    .settings-card{
+      background:var(--white);
+      border:1px solid var(--border);
+      border-radius:14px;
+      margin-bottom:18px;
+      box-shadow:var(--shadow);
+      overflow:hidden
+    }
+
+    .card-header{
+      padding:19px 22px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      gap:12px
+    }
+
+    .section-icon{
+      width:36px;
+      height:36px;
+      border-radius:9px;
+      background:var(--green-light);
+      color:var(--green-dark);
+      display:grid;
+      place-items:center
+    }
+
+    .card-header h2{
+      font-family:"Space Grotesk";
+      font-size:16px;
+      margin:0
+    }
+
+    .card-header p{
+      margin:3px 0 0;
+      font-size:12px;
+      color:var(--muted)
+    }
+
+    .card-body{padding:20px 22px}
+
+    /* // =========================
+       // PROFILE
+       // ========================= */
+    .profile-layout{
+      display:grid;
+      grid-template-columns:120px 1fr;
+      gap:25px;
+      align-items:start
+    }
+
+    .profile-picture-wrap{text-align:center}
+
+    .profile-picture{
+      width:86px;
+      height:86px;
+      margin:auto;
+      border-radius:50%;
+      background:#d9f3e7;
+      color:var(--green-dark);
+      display:grid;
+      place-items:center;
+      font-size:25px;
+      font-weight:700;
+      overflow:hidden
+    }
+
+    .profile-picture img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:none
+    }
+
+    .upload-btn{
+      border:0;
+      background:transparent;
+      color:var(--green-dark);
+      font-size:12px;
+      font-weight:700;
+      margin-top:8px
+    }
+
+    .form-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:17px
+    }
+
+    .field label{
+      display:block;
+      font-size:12px;
+      font-weight:700;
+      margin-bottom:7px
+    }
+
+    .field input,.field select{
+      width:100%;
+      height:42px;
+      border:1px solid var(--border);
+      background:var(--white);
+      color:var(--text);
+      border-radius:8px;
+      padding:0 12px;
+      outline:0
+    }
+
+    .field input:focus,.field select:focus{
+      border-color:#8fd3b3
+    }
+
+    /* // =========================
+       // ROW SETTINGS
+       // ========================= */
+    .setting-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      padding:16px 0;
+      border-bottom:1px solid var(--border)
+    }
+
+    .setting-row:first-child{padding-top:0}
+    .setting-row:last-child{
+      border-bottom:0;
+      padding-bottom:0
+    }
+
+    .setting-info strong{
+      display:block;
+      font-size:14px
+    }
+
+    .setting-info span{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      margin-top:4px;
+      line-height:1.5
+    }
+
+    /* // =========================
+       // TOGGLE
+       // ========================= */
+    .switch{
+      position:relative;
+      width:46px;
+      height:25px;
+      flex-shrink:0
+    }
+
+    .switch input{display:none}
+
+    .slider{
+      position:absolute;
+      inset:0;
+      background:#cbd5d0;
+      border-radius:30px;
+      transition:.2s
+    }
+
+    .slider:before{
+      content:"";
+      position:absolute;
+      width:19px;
+      height:19px;
+      left:3px;
+      top:3px;
+      background:#fff;
+      border-radius:50%;
+      transition:.2s;
+      box-shadow:0 2px 5px rgba(0,0,0,.15)
+    }
+
+    .switch input:checked + .slider{background:var(--green)}
+    .switch input:checked + .slider:before{transform:translateX(21px)}
+
+    /* // =========================
+       // THEME OPTIONS
+       // ========================= */
+    .theme-options{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px
+    }
+
+    .theme-option{
+      border:1px solid var(--border);
+      background:var(--white);
+      border-radius:10px;
+      padding:14px;
+      text-align:left;
+      color:var(--text);
+      transition:.2s
+    }
+
+    .theme-option:hover{border-color:#9bd8bd}
+    .theme-option.active{
+      border:2px solid var(--green);
+      background:var(--green-light)
+    }
+
+    .theme-preview{
+      height:48px;
+      border-radius:7px;
+      border:1px solid var(--border);
+      margin-bottom:10px;
+      display:flex;
+      overflow:hidden
+    }
+
+    .preview-side{width:25%;background:#dfe9e4}
+    .preview-main{flex:1;background:#fff;padding:7px}
+    .preview-line{height:5px;background:#d9e5df;border-radius:5px;margin-bottom:5px;width:75%}
+
+    .theme-option.dark .preview-side{background:#202b27}
+    .theme-option.dark .preview-main{background:#121816}
+    .theme-option.dark .preview-line{background:#34443d}
+
+    .theme-option.system .preview-side{background:linear-gradient(90deg,#dfe9e4 50%,#202b27 50%)}
+    .theme-option.system .preview-main{background:linear-gradient(90deg,#fff 50%,#121816 50%)}
+
+    .theme-option strong{font-size:13px}
+    .theme-option span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+
+    /* // =========================
+       // SECURITY / ACCOUNT
+       // ========================= */
+    .action-btn{
+      border:1px solid var(--border);
+      background:var(--white);
+      color:var(--text);
+      border-radius:8px;
+      padding:9px 13px;
+      font-size:12px;
+      font-weight:700
+    }
+
+    .action-btn:hover{
+      background:var(--green-light);
+      color:var(--green-dark)
+    }
+
+    .danger-btn{
+      border:1px solid #f0baba;
+      background:var(--danger-bg);
+      color:var(--danger);
+      border-radius:8px;
+      padding:9px 13px;
+      font-size:12px;
+      font-weight:700
+    }
+
+    .storage{
+      width:170px;
+      max-width:100%;
+      height:7px;
+      background:#e7eee9;
+      border-radius:20px;
+      overflow:hidden;
+      margin-top:8px
+    }
+
+    .storage-fill{
+      width:38%;
+      height:100%;
+      background:var(--green);
+      border-radius:20px
+    }
+
+    /* // =========================
+       // SAVE BAR
+       // ========================= */
+    .save-bar{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      margin-top:24px
+    }
+
+    .cancel-btn{
+      border:1px solid var(--border);
+      background:var(--white);
+      color:var(--text);
+      border-radius:8px;
+      padding:10px 16px;
+      font-weight:700
+    }
+
+    .save-btn{
+      border:0;
+      background:var(--green);
+      color:#fff;
+      border-radius:8px;
+      padding:10px 18px;
+      font-weight:700
+    }
+
+    .save-btn:hover{background:var(--green-dark)}
+
+    /* // =========================
+       // MODAL
+       // ========================= */
+    .modal-bg{
+      position:fixed;
+      inset:0;
+      background:rgba(15,25,21,.45);
+      display:none;
+      place-items:center;
+      z-index:100;
+      padding:20px
+    }
+
+    .modal-bg.show{display:grid}
+
+    .modal{
+      width:min(480px,100%);
+      background:var(--white);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:23px;
+      box-shadow:0 20px 70px rgba(0,0,0,.18)
+    }
+
+    .modal h3{
+      font-family:"Space Grotesk";
+      margin:0 0 8px
+    }
+
+    .modal p{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.6
+    }
+
+    .modal input{
+      width:100%;
+      height:42px;
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:0 11px;
+      background:var(--white);
+      color:var(--text);
+      outline:0
+    }
+
+    .modal-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      margin-top:18px
+    }
+
+    /* // Toast */
+    .toast{
+      position:fixed;
+      right:24px;
+      bottom:24px;
+      background:#17221e;
+      color:#fff;
+      padding:12px 16px;
+      border-radius:9px;
+      font-size:13px;
+      transform:translateY(100px);
+      opacity:0;
+      transition:.25s;
+      z-index:200
+    }
+
+    .toast.show{
+      transform:translateY(0);
+      opacity:1
+    }
+
+    /* // =========================
+       // RESPONSIVE
+       // ========================= */
+    @media(max-width:800px){
+      .sidebar{width:70px;padding:18px 8px}
+      .brand{justify-content:center;padding:3px 0 22px}
+      .brand-name,.nav-label,.nav-item span,.user-info{display:none}
+      .nav-item{justify-content:center;padding:12px}
+      .user-card{justify-content:center;left:8px;right:8px}
+      .main{margin-left:70px;width:calc(100% - 70px)}
+      .topbar{padding:0 16px}
+      .page{padding:25px 16px 50px}
+      .profile-layout{grid-template-columns:1fr}
+      .profile-picture-wrap{display:flex;align-items:center;gap:12px}
+      .profile-picture{margin:0}
+      .form-grid{grid-template-columns:1fr}
+    }
+
+    @media(max-width:600px){
+      .theme-options{grid-template-columns:1fr}
+      .setting-row{align-items:flex-start}
+      .setting-info{max-width:75%}
+      .topbar .top-icon{display:none}
+      .breadcrumb{font-size:11px}
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- // =========================
+       // SIDEBAR
+       // ========================= -->
+  <aside class="sidebar">
+
+    <div class="brand">
+      <div class="brand-logo">S</div>
+      <div class="brand-name">SRS <span>AI</span></div>
+    </div>
+
+    <div class="nav-label">Workspace</div>
+
+    <a class="nav-item" href="dashboard.html">
+      <i data-lucide="layout-dashboard" size="18"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a class="nav-item" href="projects.html">
+      <i data-lucide="folder-kanban" size="18"></i>
+      <span>Projects</span>
+    </a>
+
+    <a class="nav-item" href="templates.html">
+      <i data-lucide="files" size="18"></i>
+      <span>SRS Templates</span>
+    </a>
+
+    <a class="nav-item" href="document-editor.html">
+      <i data-lucide="file-pen-line" size="18"></i>
+      <span>AI Generator</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <i data-lucide="file-text" size="18"></i>
+      <span>Documents</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <i data-lucide="list-checks" size="18"></i>
+      <span>Requirements</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <i data-lucide="users" size="18"></i>
+      <span>Team</span>
+    </a>
+
+    <div class="nav-label" style="margin-top:22px">Account</div>
+
+    <!-- // Settings is active -->
+    <a class="nav-item active" href="settings.html">
+      <i data-lucide="settings" size="18"></i>
+      <span>Settings</span>
+    </a>
+
+    <a class="nav-item" href="#">
+      <i data-lucide="circle-help" size="18"></i>
+      <span>Help & Support</span>
+    </a>
+
+    <div class="user-card">
+      <div class="avatar">AI</div>
+      <div class="user-info">
+        <strong>Alex Johnson</strong>
+        <span>alex@example.com</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- // =========================
+       // MAIN CONTENT
+       // ========================= -->
+  <main class="main">
+
+    <header class="topbar">
+      <div class="breadcrumb">
+        <span>Account</span>
+        <i data-lucide="chevron-right" size="14"></i>
+        <strong>Settings</strong>
+      </div>
+
+      <button class="top-icon" onclick="showToast('Settings are up to date')" title="Status">
+        <i data-lucide="check-circle-2" size="17"></i>
+      </button>
+    </header>
+
+    <div class="page">
+
+      <h1 class="page-title">Settings</h1>
+      <p class="page-subtitle">Manage your profile, AI preferences, notifications, security and account.</p>
+
+      <!-- // =========================
+           // PROFILE
+           // ========================= -->
+      <section class="settings-card">
+
+        <div class="card-header">
+          <div class="section-icon"><i data-lucide="user" size="18"></i></div>
+          <div>
+            <h2>Profile</h2>
+            <p>Update your personal information.</p>
+          </div>
+        </div>
+
+        <div class="card-body profile-layout">
+
+          <div class="profile-picture-wrap">
+            <div class="profile-picture">
+              <span id="avatarText">AI</span>
+              <img id="profileImage" alt="Profile picture">
+            </div>
+
+            <!-- // Hidden file input for profile picture -->
+            <input id="imageUpload" type="file" accept="image/*" hidden onchange="uploadProfile(event)">
+
+            <button class="upload-btn" onclick="document.getElementById('imageUpload').click()">
+              Change picture
+            </button>
+          </div>
+
+          <div class="form-grid">
+
+            <div class="field">
+              <label>Name</label>
+              <input id="nameInput" value="Alex Johnson">
+            </div>
+
+            <div class="field">
+              <label>Email</label>
+              <input id="emailInput" type="email" value="alex@example.com">
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- // =========================
+           // APPEARANCE
+           // ========================= -->
+      <section class="settings-card">
+
+        <div class="card-header">
+          <div class="section-icon"><i data-lucide="palette" size="18"></i></div>
+          <div>
+            <h2>Appearance</h2>
+            <p>Choose how SRS AI looks on your device.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+
+          <div class="theme-options">
+
+            <button class="theme-option active" id="lightTheme" onclick="setTheme('light')">
+              <div class="theme-preview">
+                <div class="preview-side"></div>
+                <div class="preview-main">
+                  <div class="preview-line"></div>
+                  <div class="preview-line" style="width:55%"></div>
+                </div>
+              </div>
+              <strong>Light mode</strong>
+              <span>Clean and bright</span>
+            </button>
+
+            <button class="theme-option dark" id="darkTheme" onclick="setTheme('dark')">
+              <div class="theme-preview">
+                <div class="preview-side"></div>
+                <div class="preview-main">
+                  <div class="preview-line"></div>
+                  <div class="preview-line" style="width:55%"></div>
+                </div>
+              </div>
+              <strong>Dark mode</strong>
+              <span>Easy on the eyes</span>
+            </button>
+
+            <button class="theme-option system" id="systemTheme" onclick="setTheme('system')">
+              <div class="theme-preview">
+                <div class="preview-side"></div>
+                <div class="preview-main">
+                  <div class="preview-line"></div>
+                  <div class="preview-line" style="width:55%"></div>
+                </div>
+              </div>
+              <strong>System theme</strong>
+              <span>Follow device settings</span>
+            </button>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- // =========================
+           // AI SETTINGS
+           // ========================= -->
+      <section class="settings-card">
+
+        <div class="card-header">
+          <div class="section-icon"><i data-lucide="sparkles" size="18"></i></div>
+          <div>
+            <h2>AI Settings</h2>
+            <p>Customize how the AI generates your SRS content.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+
+          <div class="form-grid">
+
+            <div class="field">
+              <label>AI model</label>
+              <select id="aiModel">
+                <option>GPT-5.6</option>
+                <option>GPT-5</option>
+                <option>Fast AI</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Response length</label>
+              <select id="responseLength">
+                <option>Short</option>
+                <option selected>Balanced</option>
+                <option>Detailed</option>
+                <option>Very Detailed</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Writing style</label>
+              <select id="writingStyle">
+                <option selected>Professional</option>
+                <option>Technical</option>
+                <option>Simple</option>
+                <option>Formal</option>
+                <option>Concise</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Creativity level</label>
+              <select id="creativity">
+                <option>Low</option>
+                <option selected>Medium</option>
+                <option>High</option>
+                <option>Very High</option>
+              </select>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- // =========================
+           // NOTIFICATIONS
+           // ========================= -->
+      <section class="settings-card">
+
+        <div class="card-header">
+          <div class="section-icon"><i data-lucide="bell" size="18"></i></div>
+          <div>
+            <h2>Notifications</h2>
+            <p>Choose which updates you want to receive.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <strong>Email notifications</strong>
+              <span>Receive important account and product updates by email.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <strong>SRS generation notifications</strong>
+              <span>Notify me when AI finishes generating an SRS document.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <strong>Project updates</strong>
+              <span>Receive updates about projects, comments and collaboration.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- // =========================
+           // SECURITY
+           // ========================= -->
+      <section class="settings-card">
+
+        <div class="card-header">
+          <div class="section-icon"><i data-lucide="shield-check" size="18"></i></div>
+          <div>
+            <h2>Security</h2>
+            <p>Protect your SRS AI account.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <strong>Change password</strong>
+              <span>Update your account password regularly to keep your account secure.</span>
+            </div>
+            <button class="action-btn" onclick="openPasswordModal()">Change password</button>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <strong>Two-factor authentication</strong>
+              <span>Add an extra security layer when signing in.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" onchange="twoFactorChanged(this)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <strong>Active sessions</strong>
+              <span>View devices currently signed in to your account.</span>
+            </div>
+            <button class="action-btn" onclick="showSessions()">View sessions</button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- // =========================
+           // ACCOUNT
+           // ========================= -->
+      <section class="settings-card">
+
+        <div class="card-header">
+          <div class="section-icon"><i data-lucide="credit-card" size="18"></i></div>
+          <div>
+            <h2>Account</h2>
+            <p>Manage your subscription, storage and account.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <strong>Subscription</strong>
+              <span>Free Plan · Upgrade to unlock more AI generations.</span>
+            </div>
+            <button class="action-btn" onclick="showToast('Subscription management opened')">Manage</button>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <strong>Storage</strong>
+              <span>3.8 GB of 10 GB used</span>
+              <div class="storage"><div class="storage-fill"></div></div>
+            </div>
+            <button class="action-btn" onclick="showToast('Storage details opened')">View storage</button>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <strong>Delete account</strong>
+              <span>Permanently delete your account and associated data.</span>
+            </div>
+            <button class="danger-btn" onclick="openDeleteModal()">Delete account</button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- // Save settings -->
+      <div class="save-bar">
+        <button class="cancel-btn" onclick="resetSettings()">Cancel</button>
+        <button class="save-btn" onclick="saveSettings()">
+          <i data-lucide="save" size="15"></i>
+          Save Changes
+        </button>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- // =========================
+     // PASSWORD MODAL
+     // ========================= -->
+<div class="modal-bg" id="passwordModal">
+  <div class="modal">
+    <h3>Change password</h3>
+    <p>Enter a new password for your SRS AI account.</p>
+
+    <div class="field">
+      <label>New password</label>
+      <input type="password" id="newPassword" placeholder="Enter new password">
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>Confirm password</label>
+      <input type="password" id="confirmPassword" placeholder="Confirm password">
+    </div>
+
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closePasswordModal()">Cancel</button>
+      <button class="save-btn" onclick="changePassword()">Update password</button>
+    </div>
+  </div>
+</div>
+
+<!-- // =========================
+     // DELETE ACCOUNT MODAL
+     // ========================= -->
+<div class="modal-bg" id="deleteModal">
+  <div class="modal">
+    <h3>Delete account?</h3>
+    <p>This action is permanent. Your projects, SRS documents and account data will be deleted.</p>
+
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+      <button class="danger-btn" onclick="deleteAccount()">Yes, delete account</button>
+    </div>
+  </div>
+</div>
+
+<!-- // Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* // =========================
+   // INITIALIZE ICONS
+   // ========================= */
+lucide.createIcons();
+
+/* // =========================
+   // THEME
+   // ========================= */
+function setTheme(theme){
+  document.querySelectorAll(".theme-option").forEach(item=>{
+    item.classList.remove("active");
+  });
+
+  if(theme==="dark"){
+    document.body.classList.add("dark");
+    document.getElementById("darkTheme").classList.add("active");
+  }
+  else if(theme==="system"){
+    const prefersDark=window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.body.classList.toggle("dark",prefersDark);
+    document.getElementById("systemTheme").classList.add("active");
+  }
+  else{
+    document.body.classList.remove("dark");
+    document.getElementById("lightTheme").classList.add("active");
+  }
+
+  localStorage.setItem("srsTheme",theme);
+  showToast(theme.charAt(0).toUpperCase()+theme.slice(1)+" theme selected");
+}
+
+/* // Load saved theme */
+const savedTheme=localStorage.getItem("srsTheme");
+if(savedTheme){
+  setTheme(savedTheme);
+}
+
+/* // =========================
+   // PROFILE PICTURE
+   // ========================= */
+function uploadProfile(event){
+  const file=event.target.files[0];
+
+  if(!file)return;
+
+  const reader=new FileReader();
+
+  reader.onload=function(e){
+    const image=document.getElementById("profileImage");
+    image.src=e.target.result;
+    image.style.display="block";
+    document.getElementById("avatarText").style.display="none";
+
+    localStorage.setItem("profileImage",e.target.result);
+    showToast("Profile picture updated");
+  };
+
+  reader.readAsDataURL(file);
+}
+
+/* // Restore profile picture */
+const savedImage=localStorage.getItem("profileImage");
+if(savedImage){
+  document.getElementById("profileImage").src=savedImage;
+  document.getElementById("profileImage").style.display="block";
+  document.getElementById("avatarText").style.display="none";
+}
+
+/* // =========================
+   // SAVE SETTINGS
+   // ========================= */
+function saveSettings(){
+
+  const settings={
+    name:document.getElementById("nameInput").value,
+    email:document.getElementById("emailInput").value,
+    aiModel:document.getElementById("aiModel").value,
+    responseLength:document.getElementById("responseLength").value,
+    writingStyle:document.getElementById("writingStyle").value,
+    creativity:document.getElementById("creativity").value
+  };
+
+  localStorage.setItem("srsSettings",JSON.stringify(settings));
+
+  showToast("Settings saved successfully");
+}
+
+/* // Restore settings */
+const storedSettings=localStorage.getItem("srsSettings");
+
+if(storedSettings){
+  const settings=JSON.parse(storedSettings);
+
+  document.getElementById("nameInput").value=settings.name||"Alex Johnson";
+  document.getElementById("emailInput").value=settings.email||"alex@example.com";
+  document.getElementById("aiModel").value=settings.aiModel||"GPT-5.6";
+  document.getElementById("responseLength").value=settings.responseLength||"Balanced";
+  document.getElementById("writingStyle").value=settings.writingStyle||"Professional";
+  document.getElementById("creativity").value=settings.creativity||"Medium";
+}
+
+/* // Cancel restores last saved values */
+function resetSettings(){
+  location.reload();
+}
+
+/* // =========================
+   // PASSWORD
+   // ========================= */
+function openPasswordModal(){
+  document.getElementById("passwordModal").classList.add("show");
+}
+
+function closePasswordModal(){
+  document.getElementById("passwordModal").classList.remove("show");
+}
+
+function changePassword(){
+
+  const password=document.getElementById("newPassword").value;
+  const confirm=document.getElementById("confirmPassword").value;
+
+  if(!password||!confirm){
+    showToast("Please fill both password fields");
+    return;
+  }
+
+  if(password!==confirm){
+    showToast("Passwords do not match");
+    return;
+  }
+
+  closePasswordModal();
+  document.getElementById("newPassword").value="";
+  document.getElementById("confirmPassword").value="";
+  showToast("Password updated successfully");
+}
+
+/* // =========================
+   // TWO FACTOR AUTHENTICATION
+   // ========================= */
+function twoFactorChanged(input){
+  if(input.checked){
+    showToast("Two-factor authentication enabled");
+  }else{
+    showToast("Two-factor authentication disabled");
+  }
+}
+
+/* // =========================
+   // ACTIVE SESSIONS
+   // ========================= */
+function showSessions(){
+  alert(
+    "Active Sessions\n\n" +
+    "• Windows PC — Current session\n" +
+    "• Chrome Browser — India\n" +
+    "• Last active: Just now"
+  );
+}
+
+/* // =========================
+   // DELETE ACCOUNT
+   // ========================= */
+function openDeleteModal(){
+  document.getElementById("deleteModal").classList.add("show");
+}
+
+function closeDeleteModal(){
+  document.getElementById("deleteModal").classList.remove("show");
+}
+
+function deleteAccount(){
+  closeDeleteModal();
+  showToast("Demo: account deletion request submitted");
+}
+
+/* // =========================
+   // TOAST
+   // ========================= */
+let toastTimer;
+
+function showToast(message){
+  const toast=document.getElementById("toast");
+
+  toast.textContent=message;
+  toast.classList.add("show");
+
+  clearTimeout(toastTimer);
+
+  toastTimer=setTimeout(()=>{
+    toast.classList.remove("show");
+  },2500);
+}
+
+/* // Close modal by clicking outside */
+document.querySelectorAll(".modal-bg").forEach(modal=>{
+  modal.addEventListener("click",event=>{
+    if(event.target===modal){
+      modal.classList.remove("show");
+    }
+  });
+});
+</script>
+
+</body>
+</html>
