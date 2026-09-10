@@ -7,8 +7,8 @@ Software Requirements Specification (SRS) documents from a simple software idea.
 
 The user provides:
 
-1. Project Name
-2. Client's Software Idea
+1. SRS Generator
+This Software fill the gap Market
 
 The AI analyzes the idea and asks clarification questions when important
 information is missing.
