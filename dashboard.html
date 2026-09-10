@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>SRS AI - Dashboard</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7f6;
+            color: #222;
+        }
+
+        header {
+            background: #0f9d58;
+            color: white;
+            padding: 20px 40px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        #logoutButton {
+            border: none;
+            background: white;
+            color: #0f9d58;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #logoutButton:hover {
+            background: #eeeeee;
+        }
+
+        main {
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        .welcome-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+
+            box-shadow:
+                0 5px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .welcome-card h2 {
+            margin-top: 0;
+            font-size: 32px;
+        }
+
+        .welcome-card p {
+            color: #666;
+            font-size: 17px;
+        }
+
+        .user-info {
+            margin-top: 30px;
+            padding: 20px;
+
+            background: #f1f8f4;
+
+            border-radius: 10px;
+        }
+
+        .user-info p {
+            color: #222;
+        }
+
+        .user-info strong {
+            display: inline-block;
+            width: 80px;
+        }
+
+        .loading {
+            text-align: center;
+            margin-top: 100px;
+            font-size: 20px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- HEADER -->
+
+    <header>
+
+        <h1>SRS AI</h1>
+
+        <button id="logoutButton">
+            Logout
+        </button>
+
+    </header>
+
+
+    <!-- MAIN -->
+
+    <main>
+
+        <div
+            id="loading"
+            class="loading"
+        >
+            Checking login...
+        </div>
+
+
+        <div
+            id="dashboard"
+            class="welcome-card"
+            style="display: none;"
+        >
+
+            <h2>
+                Welcome to SRS AI 👋
+            </h2>
+
+            <p>
+                You are successfully logged in.
+            </p>
+
+
+            <div class="user-info">
+
+                <p>
+                    <strong>Name:</strong>
+                    <span id="userName"></span>
+                </p>
+
+                <p>
+                    <strong>Email:</strong>
+                    <span id="userEmail"></span>
+                </p>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script>
+
+
+        // ============================================
+        // CHECK LOGIN
+        // ============================================
+
+        async function checkLogin() {
+
+            try {
+ 
+               const response = await fetch(
+    "http://127.0.0.1:5000/api/me",
+    {
+        method: "GET",
+        credentials: "include"
+    }
+);
+
+
+                const data =
+                    await response.json();
+
+
+                // User is NOT logged in
+                if (!data.success) {
+
+                    window.location.href =
+                        "login.html";
+
+                    return;
+                }
+
+
+                // Hide loading
+                document.getElementById("loading")
+                    .style.display = "none";
+
+
+                // Show dashboard
+                document.getElementById("dashboard")
+                    .style.display = "block";
+
+
+                // Show user information
+                document.getElementById("userName")
+                    .textContent =
+                    data.user.fullName;
+
+
+                document.getElementById("userEmail")
+                    .textContent =
+                    data.user.email;
+
+
+            } catch (error) {
+
+                console.error(
+                    "Dashboard error:",
+                    error
+                );
+
+                document.getElementById("loading")
+                    .textContent =
+                    "Cannot connect to the backend.";
+
+            }
+
+        }
+
+
+        // ============================================
+        // LOGOUT
+        // ============================================
+
+        document
+            .getElementById("logoutButton")
+            .addEventListener(
+                "click",
+                async () => {
+
+                    try {
+
+                        const response = await fetch(
+    "http://127.0.0.1:5000/api/logout",
+    {
+        method: "POST",
+        credentials: "include"
+    }
+);
+
+
+                        const data =
+                            await response.json();
+
+
+                        if (data.success) {
+
+                            window.location.href =
+                                "login.html";
+
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            "Logout error:",
+                            error
+                        );
+
+                        alert(
+                            "Could not connect to server."
+                        );
+
+                    }
+
+                }
+            );
+
+
+        // Start login check
+        checkLogin();
+
+
+    </script>
+
+
+</body>
+
+</html>

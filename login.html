@@ -1255,225 +1255,231 @@
          })
        });
        ========================================================= */
-    function loginUser(event) {
+   async function loginUser(event) {
 
-      event.preventDefault();
+    event.preventDefault();
 
-      const email =
+    const email =
         document.getElementById("loginEmail").value.trim();
 
-      const password =
+    const password =
         document.getElementById("loginPassword").value;
 
-      /* Validate email */
-      if (!email) {
-        showMessage(
-          "loginMessage",
-          "error",
-          "Please enter your email address."
-        );
-        return;
-      }
-
-      /* Validate password */
-      if (!password) {
-        showMessage(
-          "loginMessage",
-          "error",
-          "Please enter your password."
-        );
-        return;
-      }
-
-      /* Password minimum validation */
-      if (password.length < 6) {
-        showMessage(
-          "loginMessage",
-          "error",
-          "Password must contain at least 6 characters."
-        );
-        return;
-      }
-
-      /* Get login button */
-      const button =
+    const loginButton =
         document.getElementById("loginButton");
 
-      const text =
-        document.getElementById("loginButtonText");
 
-      const icon =
-        document.getElementById("loginButtonIcon");
+    // Check fields
+    if (!email || !password) {
 
-      /* Loading state */
-      button.disabled = true;
-
-      text.textContent = "Logging in...";
-
-      icon.setAttribute(
-        "data-lucide",
-        "loader-circle"
-      );
-
-      lucide.createIcons();
-
-      /*
-        Simulated server response.
-
-        Replace this setTimeout with your real backend call.
-      */
-      setTimeout(function() {
-
-        button.disabled = false;
-
-        text.textContent = "Login";
-
-        icon.setAttribute(
-          "data-lucide",
-          "arrow-right"
-        );
-
-        lucide.createIcons();
-
-        /*
-          Success message.
-
-          When backend is connected, redirect to:
-
-          window.location.href = "dashboard.html";
-        */
         showMessage(
-          "loginMessage",
-          "success",
-          "Login successful. Welcome back!"
+            "loginMessage",
+            "error",
+            "Please enter your email and password."
         );
 
-      }, 1200);
+        return;
     }
+
+
+    loginButton.disabled = true;
+    loginButton.textContent = "Logging in...";
+
+
+    try {
+
+       const response = await fetch(
+    "http://127.0.0.1:5000/api/login",
+    {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+            email: email,
+            password: password
+        })
+    }
+);
+
+
+        const data = await response.json();
+
+
+        if (data.success) {
+
+            showMessage(
+                "loginMessage",
+                "success",
+                "Login successful! Redirecting..."
+            );
+
+
+            setTimeout(() => {
+
+                window.location.href =
+                    "dashboard.html";
+
+            }, 800);
+
+
+        } else {
+
+            showMessage(
+                "loginMessage",
+                "error",
+                data.message ||
+                "Invalid email or password."
+            );
+        }
+
+
+    } catch (error) {
+
+        console.error("Login error:", error);
+
+        showMessage(
+            "loginMessage",
+            "error",
+            "Cannot connect to the server. Make sure the backend is running."
+        );
+
+
+    } finally {
+
+        loginButton.disabled = false;
+        loginButton.textContent = "Login";
+    }
+}
+
 
 
     /* =========================================================
        5. REGISTER FORM VALIDATION + LOADING
        ========================================================= */
-    function registerUser(event) {
+     async function registerUser(event) {
 
-      event.preventDefault();
+    event.preventDefault();
 
-      const fullName =
-        document.getElementById("fullName").value.trim();
-
-      const email =
-        document.getElementById("registerEmail").value.trim();
-
-      const password =
-        document.getElementById("registerPassword").value;
-
-      const confirmPassword =
+    const fullName = document.getElementById("fullName").value.trim();
+    const email = document.getElementById("registerEmail").value.trim();
+    const password = document.getElementById("registerPassword").value;
+    const confirmPassword =
         document.getElementById("confirmPassword").value;
 
-      /* Validate full name */
-      if (fullName.length < 2) {
-
-        showMessage(
-          "registerMessage",
-          "error",
-          "Please enter your full name."
-        );
-
-        return;
-      }
-
-      /* Validate email */
-      if (!email) {
-
-        showMessage(
-          "registerMessage",
-          "error",
-          "Please enter a valid email address."
-        );
-
-        return;
-      }
-
-      /* Validate password */
-      if (password.length < 8) {
-
-        showMessage(
-          "registerMessage",
-          "error",
-          "Password must contain at least 8 characters."
-        );
-
-        return;
-      }
-
-      /* Check password confirmation */
-      if (password !== confirmPassword) {
-
-        showMessage(
-          "registerMessage",
-          "error",
-          "Passwords do not match."
-        );
-
-        return;
-      }
-
-      /* Get register button */
-      const button =
+    const registerButton =
         document.getElementById("registerButton");
 
-      const text =
-        document.getElementById("registerButtonText");
+    const message =
+        document.getElementById("registerMessage");
 
-      const icon =
-        document.getElementById("registerButtonIcon");
 
-      /* Loading state */
-      button.disabled = true;
+    // Check fields
+    if (!fullName || !email || !password || !confirmPassword) {
 
-      text.textContent = "Creating account...";
-
-      icon.setAttribute(
-        "data-lucide",
-        "loader-circle"
-      );
-
-      lucide.createIcons();
-
-      /*
-        Simulate registration request.
-
-        Replace with your backend API later.
-      */
-      setTimeout(function() {
-
-        button.disabled = false;
-
-        text.textContent = "Create Account";
-
-        icon.setAttribute(
-          "data-lucide",
-          "arrow-right"
-        );
-
-        lucide.createIcons();
-
-        /* Success message */
         showMessage(
-          "registerMessage",
-          "success",
-          "Account created successfully!"
+            message,
+            "Please fill in all fields.",
+            "error"
         );
 
-        /*
-          After backend integration you can redirect:
-
-          window.location.href = "dashboard.html";
-        */
-
-      }, 1400);
+        return;
     }
+
+
+    // Password length
+    if (password.length < 8) {
+
+        showMessage(
+            message,
+            "Password must be at least 8 characters.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    // Password confirmation
+    if (password !== confirmPassword) {
+
+        showMessage(
+            message,
+            "Passwords do not match.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    registerButton.disabled = true;
+    registerButton.textContent = "Creating account...";
+
+
+    try {
+
+        const response = await fetch(
+    "http://127.0.0.1:5000/api/register",
+    {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                credentials: "include",
+
+                body: JSON.stringify({
+                    fullName: fullName,
+                    email: email,
+                    password: password
+                })
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (data.success) {
+showMessage(
+    "registerMessage",
+    "success",
+    "Account created successfully! Redirecting..."
+);
+
+            setTimeout(() => {
+                window.location.href = "dashboard.html";
+            }, 800);
+
+        } else {
+
+            showMessage(
+    "registerMessage",
+    "error",
+    data.message || "Registration failed."
+);
+        }
+
+
+    } catch (error) {
+
+        console.error("Registration error:", error);
+
+        showMessage(
+    "registerMessage",
+    "error",
+    "Cannot connect to the server. Make sure the backend is running."
+);
+
+    } finally {
+
+        registerButton.disabled = false;
+        registerButton.textContent = "Create Account";
+    }
+}
 
 
     /* =========================================================
@@ -1585,42 +1591,51 @@
     /* =========================================================
        8. FORGOT PASSWORD
        ========================================================= */
-    function forgotPassword() {
+   async function forgotPassword() {
 
-      const email =
-        document.getElementById("loginEmail").value.trim();
+    const email = document.getElementById("loginEmail").value.trim();
 
-      if (!email) {
+    if (!email) {
 
-        showMessage(
-          "loginMessage",
-          "error",
-          "Enter your email address first."
+        showToast(
+            "Please enter your email address first."
         );
 
         return;
-      }
-
-      showMessage(
-        "loginMessage",
-        "success",
-        "Password reset instructions have been requested."
-      );
-
-      /*
-        Backend example:
-
-        fetch("/api/forgot-password", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            email: email
-          })
-        });
-      */
     }
+
+
+    try {
+
+        const response = await fetch(
+    "http://127.0.0.1:5000/api/forgot-password",
+    {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    email: email
+                })
+            }
+        );
+
+
+        const data = await response.json();
+
+        showToast(data.message);
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast(
+            "Cannot connect to the server."
+        );
+    }
+}
 
 
     /* =========================================================
@@ -1648,48 +1663,49 @@
     /* =========================================================
        10. SHOW ERROR / SUCCESS MESSAGE
        ========================================================= */
-    function showMessage(elementId, type, message) {
+   function showMessage(elementId, type, message) {
 
-      const box =
-        document.getElementById(elementId);
+    const box = document.getElementById(elementId);
 
-      const text =
-        box.querySelector("span");
-
-      const icon =
-        box.querySelector("i");
-
-      /* Set message */
-      text.textContent = message;
-
-      /* Set type */
-      box.classList.remove("error", "success");
-
-      box.classList.add(type);
-
-      /* Select icon */
-      if (type === "error") {
-
-        icon.setAttribute(
-          "data-lucide",
-          "circle-alert"
-        );
-
-      } else {
-
-        icon.setAttribute(
-          "data-lucide",
-          "circle-check"
-        );
-      }
-
-      /* Show message */
-      box.classList.add("show");
-
-      /* Refresh icon */
-      lucide.createIcons();
+    if (!box) {
+        console.error("Message box not found:", elementId);
+        return;
     }
 
+    const text = box.querySelector("span");
+    const icon = box.querySelector("i");
+
+    if (text) {
+        text.textContent = message;
+    }
+
+    box.classList.remove("error", "success");
+    box.classList.add(type);
+
+    if (icon) {
+
+        if (type === "error") {
+
+            icon.setAttribute(
+                "data-lucide",
+                "circle-alert"
+            );
+
+        } else {
+
+            icon.setAttribute(
+                "data-lucide",
+                "circle-check"
+            );
+        }
+    }
+
+    box.classList.add("show");
+
+    if (typeof lucide !== "undefined") {
+        lucide.createIcons();
+    }
+}
 
     /* =========================================================
        11. HIDE MESSAGE
