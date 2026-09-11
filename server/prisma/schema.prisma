@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model clarification_questions {
+  id Int @id @default(autoincrement())
+  project_id Int
+  question String
+  answer String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  projects projects @relation(fields: [project_id], references: [id])
+}
+
+model projects {
+  id Int @id @default(autoincrement())
+  user_id Int
+  name String @db.VarChar(255)
+  client_idea String
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  clarification_questions clarification_questions[]
+  users users @relation(fields: [user_id], references: [id])
+  srs_documents srs_documents[]
+}
+
+model srs_documents {
+  id Int @id @default(autoincrement())
+  project_id Int
+  title String @db.VarChar(255)
+  content Json?
+  version Int? @default(1)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  projects projects @relation(fields: [project_id], references: [id])
+}
+
+model users {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(100)
+  email String @unique @db.VarChar(255)
+  password_hash String
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  projects projects[]
+}
