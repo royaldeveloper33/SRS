@@ -1,0 +1,31 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --check server.mjs && node --check cloud-schema.mjs && node --check prisma-test.mjs",
+    "prisma:generate": "prisma generate",
+    "db:cloud-setup": "node cloud-schema.mjs",
+    "prisma:test": "node prisma-test.mjs",
+    "dev": "node --watch server.mjs",
+    "start": "node server.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "bcryptjs": "^3.0.3",
+    "docx": "^9.7.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "pdfkit": "^0.20.2",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "prisma": "^7.10.0"
+  }
+}

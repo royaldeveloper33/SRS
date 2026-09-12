@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model clarification_questions {
+  id         Int       @id @default(autoincrement())
+  project_id Int
+  question   String
+  answer     String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  projects   projects  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model projects {
+  id                      Int                       @id @default(autoincrement())
+  user_id                 Int
+  name                    String                    @db.VarChar(255)
+  client_idea             String
+  created_at              DateTime?                 @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?                 @default(now()) @db.Timestamp(6)
+  status                  String                    @default("draft") @db.VarChar(30)
+  clarification_questions clarification_questions[]
+  users                   users                     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  srs_documents           srs_documents[]
+  document_exports        document_exports[]
+}
+
+model srs_documents {
+  id         Int       @id @default(autoincrement())
+  project_id Int
+  title      String    @db.VarChar(255)
+  content    Json?
+  version    Int?      @default(1)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  projects   projects  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  srs_versions srs_versions[]
+}
+
+model srs_versions {
+  id              Int           @id @default(autoincrement())
+  srs_document_id Int
+  content         Json?
+  version         Int
+  created_at      DateTime?     @default(now()) @db.Timestamp(6)
+  srs_documents   srs_documents @relation(fields: [srs_document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model document_exports {
+  id          Int       @id @default(autoincrement())
+  project_id  Int
+  format      String    @db.VarChar(10)
+  storage_url String
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  projects    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model users {
+  id            Int        @id @default(autoincrement())
+  name          String     @db.VarChar(100)
+  email         String     @unique @db.VarChar(255)
+  password_hash String
+  api_key_hash String?
+  api_key_created_at DateTime? @db.Timestamp(6)
+  created_at    DateTime?  @default(now()) @db.Timestamp(6)
+  projects      projects[]
+}

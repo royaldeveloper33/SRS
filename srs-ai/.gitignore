@@ -1,0 +1,22 @@
+# Dependencies and package-manager cache
+client/node_modules/
+client/.npm-cache/
+client/dist/
+server/node_modules/
+server/.npm-cache/
+
+# Local secrets
+server/.env
+
+# Generated Prisma client (created by `npm run prisma:generate`)
+server/generated/
+
+# Local AI-editor metadata
+server/.agents/
+server/.claude/
+server/.cursor/
+server/.devin/
+
+# Workspace cache
+srs-ai/.npm-cache/
+

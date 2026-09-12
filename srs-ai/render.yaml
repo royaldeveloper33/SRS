@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: srs-ai-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install && npm run prisma:generate
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
+      - key: CORS_ORIGIN
+        sync: false
