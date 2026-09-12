@@ -18,5 +18,4 @@ server/.cursor/
 server/.devin/
 
 # Workspace cache
-srs-ai/.npm-cache/
-
+.npm-cache/
