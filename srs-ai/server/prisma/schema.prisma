@@ -67,6 +67,9 @@ model users {
   password_hash String
   api_key_hash String?
   api_key_created_at DateTime? @db.Timestamp(6)
+  email_verified Boolean @default(false)
+  email_otp_hash String?
+  email_otp_expires_at DateTime? @db.Timestamp(6)
   created_at    DateTime?  @default(now()) @db.Timestamp(6)
   projects      projects[]
 }

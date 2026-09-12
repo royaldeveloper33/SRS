@@ -71,6 +71,9 @@ CREATE INDEX IF NOT EXISTS srs_versions_document_id_idx ON srs_versions(srs_docu
 CREATE INDEX IF NOT EXISTS document_exports_project_id_idx ON document_exports(project_id);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS api_key_hash TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS api_key_created_at TIMESTAMP(6);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp_hash TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp_expires_at TIMESTAMP(6);
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR(30) NOT NULL DEFAULT 'draft';
 `;
 

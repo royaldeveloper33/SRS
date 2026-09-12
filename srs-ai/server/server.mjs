@@ -109,17 +109,27 @@ const geminiGenerate = async (prompt, { jsonResponse = false } = {}) => {
   return { text, tokens };
 };
 const aiError = (response, error, fallback) => { console.error(fallback, error); return response.status(error.statusCode || 500).json({ error: error.statusCode === 503 ? error.message : fallback }); };
+const sendOtpEmail = async (email, code) => {
+  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) { const error = new Error("Email verification is not configured. Add RESEND_API_KEY and EMAIL_FROM to server/.env."); error.statusCode = 503; throw error; }
+  const sent = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [email], subject: "Your SRS AI verification code", html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:32px"><h1 style="color:#192329">Verify your email</h1><p>Use this code to finish creating your SRS AI account:</p><div style="margin:24px 0;padding:18px;background:#e5f7ef;color:#087859;font-size:28px;font-weight:700;letter-spacing:8px;text-align:center">${code}</div><p>This code expires in 10 minutes. If you did not request this, you can ignore this email.</p></div>` }) });
+  if (!sent.ok) { const detail = await sent.json().catch(() => ({})); const error = new Error(detail.message || "Unable to send verification email"); error.statusCode = 502; throw error; }
+};
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(currentDirectory, "public")));
 
 app.post("/api/auth/register", handle(async (request, response) => {
-  const { name, email, password } = request.body;
-  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const { name, email, password } = request.body; const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
   if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || typeof password !== "string" || password.length < 8) return response.status(400).json({ error: "Name, valid email, and a password of at least 8 characters are required" });
   if (await prisma.users.findUnique({ where: { email: normalizedEmail } })) return response.status(409).json({ error: "An account already exists for this email" });
-  const user = await prisma.users.create({ data: { name: name.trim(), email: normalizedEmail, password_hash: await bcrypt.hash(password, 12) } });
-  return response.status(201).json(authResponse(user));
+  const code = String(crypto.randomInt(100000, 1000000)); const user = await prisma.users.create({ data: { name: name.trim(), email: normalizedEmail, password_hash: await bcrypt.hash(password, 12), email_verified: false, email_otp_hash: crypto.createHash("sha256").update(code).digest("hex"), email_otp_expires_at: new Date(Date.now() + 10 * 60 * 1000) } });
+  try { await sendOtpEmail(user.email, code); } catch (error) { await prisma.users.delete({ where: { id: user.id } }); throw error; }
+  return response.status(201).json({ requiresVerification: true, email: user.email });
+}));
+app.post("/api/auth/verify-email", handle(async (request, response) => {
+  const email = typeof request.body.email === "string" ? request.body.email.trim().toLowerCase() : ""; const code = String(request.body.code || ""); const user = await prisma.users.findUnique({ where: { email } });
+  if (!user || user.email_verified || !user.email_otp_expires_at || user.email_otp_expires_at < new Date() || crypto.createHash("sha256").update(code).digest("hex") !== user.email_otp_hash) return response.status(400).json({ error: "Invalid or expired verification code" });
+  const verified = await prisma.users.update({ where: { id: user.id }, data: { email_verified: true, email_otp_hash: null, email_otp_expires_at: null } }); return response.json(authResponse(verified));
 }));
 app.post("/api/auth/login", handle(async (request, response) => {
   const email = typeof request.body.email === "string" ? request.body.email.trim().toLowerCase() : "";
@@ -127,6 +137,7 @@ app.post("/api/auth/login", handle(async (request, response) => {
   if (!email || typeof password !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error: "A valid email and password are required" });
   const user = await prisma.users.findUnique({ where: { email } });
   if (!user || typeof password !== "string" || !(await bcrypt.compare(password, user.password_hash))) return response.status(401).json({ error: "Incorrect email or password" });
+  if (!user.email_verified) return response.status(403).json({ error: "Verify your email before signing in" });
   return response.json(authResponse(user));
 }));
 app.get("/api/health", (_request, response) => response.json({ message: "SRS AI API is running" }));
@@ -245,8 +256,8 @@ app.get("/api/documents/:documentId/export", handle(async (request, response) =>
   const documentId = parseId(request.params.documentId); const format = String(request.query.format || "").toLowerCase(); if (!documentId || !["pdf", "docx"].includes(format)) return response.status(400).json({ error: "documentId and format (pdf or docx) are required" });
   const document = await prisma.srs_documents.findUnique({ where: { id: documentId }, include: { projects: true } }); if (!document || document.projects.user_id !== request.user.id) return response.status(404).json({ error: "SRS document not found" });
   const text = typeof document.content?.text === "string" ? document.content.text : "No SRS content available."; const filename = `${document.projects.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "srs"}-srs.${format}`; await prisma.document_exports.create({ data: { project_id: document.project_id, format, storage_url: `generated://${filename}` } }); response.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  if (format === "pdf") { response.setHeader("Content-Type", "application/pdf"); const pdf = new PDFDocument({ margin: 54, info: { Title: document.title, Author: "SRS AI" } }); pdf.pipe(response); pdf.fontSize(20).fillColor("#192329").text(document.title); pdf.moveDown().fontSize(10).text(`Project: ${document.projects.name} | Version ${document.version || 1}`); pdf.moveDown().fontSize(10).text(text, { lineGap: 4 }); return pdf.end(); }
-  const word = new Document({ sections: [{ children: [new Paragraph({ text: document.title, heading: HeadingLevel.TITLE }), new Paragraph({ text: `Project: ${document.projects.name} | Version ${document.version || 1}` }), ...text.split(/\r?\n/).map((line) => new Paragraph({ children: [new TextRun(line || " ")] }))] }] }); return response.type("application/vnd.openxmlformats-officedocument.wordprocessingml.document").send(await Packer.toBuffer(word));
+  if (format === "pdf") { response.setHeader("Content-Type", "application/pdf"); const pdf = new PDFDocument({ margin: 54, info: { Title: document.title, Author: "SRS AI" } }); pdf.pipe(response); pdf.rect(0, 0, pdf.page.width, 94).fill("#192329"); pdf.fillColor("#ffffff").fontSize(10).text("SRS AI  /  SOFTWARE REQUIREMENTS", 54, 27); pdf.fontSize(21).font("Helvetica-Bold").text(document.title, 54, 47); pdf.fillColor("#66757a").font("Helvetica").fontSize(9).text(`Project: ${document.projects.name}  |  Version ${document.version || 1}  |  ${new Date().toLocaleDateString()}`, 54, 112); pdf.moveDown(2); for (const line of text.split(/\r?\n/)) { if (/^#{1,3}\s+/.test(line)) { pdf.moveDown(.7).fillColor("#087859").font("Helvetica-Bold").fontSize(line.startsWith("# ") ? 16 : 13).text(line.replace(/^#+\s*/, "")); } else if (line.trim()) { pdf.fillColor("#27353a").font("Helvetica").fontSize(10).text(line.replace(/^[-*]\s*/, "• "), { lineGap: 4 }); } else pdf.moveDown(.45); } pdf.fillColor("#8a9699").fontSize(8).text("Generated by SRS AI", 54, pdf.page.height - 45); return pdf.end(); }
+  const paragraphs = text.split(/\r?\n/).map((line) => /^#{1,3}\s+/.test(line) ? new Paragraph({ text: line.replace(/^#+\s*/, ""), heading: line.startsWith("# ") ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2 }) : new Paragraph({ children: [new TextRun({ text: line || " ", size: 21 })] })); const word = new Document({ sections: [{ children: [new Paragraph({ text: document.title, heading: HeadingLevel.TITLE }), new Paragraph({ children: [new TextRun({ text: `Project: ${document.projects.name} | Version ${document.version || 1}`, color: "087859", bold: true, size: 20 })] }), new Paragraph(" "), ...paragraphs] }] }); return response.type("application/vnd.openxmlformats-officedocument.wordprocessingml.document").send(await Packer.toBuffer(word));
 }));
 
 app.use("/api", (_request, response) => response.status(404).json({ error: "API route not found" }));
