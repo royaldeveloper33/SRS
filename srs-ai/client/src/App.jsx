@@ -20,11 +20,206 @@ const InlineLoader = ({ children = "Working…" }) => <span className="inline-lo
 const questionChoices = (question) => { const match = question.match(/\[([^\]]+)\]/); if (match) return match[1].split("|").map((item) => item.trim()).filter(Boolean); return /^(do |is |are |will |can |should |does |has |have )/i.test(question.trim()) ? ["Yes", "No"] : []; };
 
 function Auth({ onLogin }) {
-  const [register, setRegister] = useState(false); const [verification, setVerification] = useState(null); const [form, setForm] = useState({ name: "", email: "", password: "" }); const [code, setCode] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
-  const submit = async (event) => { event.preventDefault(); setBusy(true); setError(""); try { const result = await api(`/api/auth/${register ? "register" : "login"}`, { method: "POST", body: JSON.stringify(form) }); if (result.requiresVerification) setVerification(result.email); else onLogin(result); } catch (err) { setError(err.message); } finally { setBusy(false); } };
+  const [register, setRegister] = useState(false);const [loginProgress, setLoginProgress] = useState(0); const [googleProgress, setGoogleProgress] = useState(0); const [verification, setVerification] = useState(null); const [form, setForm] = useState({ name: "", email: "", password: "" }); const [code, setCode] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const [showPassword, setShowPassword] = useState(false);
+const submit = async (event) => {
+  event.preventDefault();
+  setBusy(true);
+  setError("");
+
+  if (!register) {
+    setLoginProgress(10);
+
+    const progressTimer = setInterval(() => {
+      setLoginProgress((current) => {
+        if (current >= 90) {
+          clearInterval(progressTimer);
+          return current;
+        }
+
+        return current + 10;
+      });
+    }, 200);
+  }
+
+  try {
+    const result = await api(`/api/auth/${register ? "register" : "login"}`, {
+      method: "POST",
+      body: JSON.stringify(form)
+    });
+
+    if (!register) {
+      setLoginProgress(100);
+    }
+
+    if (result.requiresVerification) {
+      setVerification(result.email);
+    } else {
+      onLogin(result);
+    }
+  } catch (err) {
+    setError(err.message);
+    setLoginProgress(0);
+  } finally {
+    setBusy(false);
+  }
+};  
   const verify = async (event) => { event.preventDefault(); setBusy(true); setError(""); try { onLogin(await api("/api/auth/verify-email", { method: "POST", body: JSON.stringify({ email: verification, code }) })); } catch (err) { setError(err.message); } finally { setBusy(false); } };
   const changeMode = () => { setRegister(!register); setVerification(null); setError(""); setCode(""); };
-  return <main className="auth-page"><section className="brand-panel"><Brand /><div className="brand-content"><small>✦ AI-POWERED REQUIREMENTS</small><h1>Requirements,<br />made <em>clear.</em></h1><p>Turn early-stage software ideas into complete, structured requirements your whole team can understand.</p><b>✓ Ask the right clarification questions</b><b>✓ Generate a professional SRS in minutes</b><b>✓ Keep every version in one workspace</b></div><footer>© 2026 SRS AI · Build with confidence</footer></section><section className="form-panel"><div className="auth-card">{verification ? <><small>EMAIL VERIFICATION</small><h2>Check your inbox</h2><p>We sent a six-digit verification code to <b>{verification}</b>.</p><form onSubmit={verify} className="otp-form"><label>Verification code<input className="otp-input" required inputMode="numeric" autoComplete="one-time-code" maxLength="6" placeholder="000000" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} /></label>{error && <div className="message error">{error}</div>}<button className="primary-btn full" disabled={busy || code.length !== 6}>{busy ? <InlineLoader>Verifying…</InlineLoader> : "Verify email →"}</button></form><div className="switch"><button onClick={() => setVerification(null)}>← Use a different email</button></div></> : <><small>{register ? "START FOR FREE" : "WELCOME BACK"}</small><h2>{register ? "Create your account" : "Welcome back"}</h2><p>{register ? "We will verify your email before creating your workspace." : "Sign in to continue to your workspace."}</p><form onSubmit={submit}>{register && <label>Full name<input required minLength="2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>}<label>Email address<input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label><label>Password<input required minLength="8" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>{error && <div className="message error">{error}</div>}<button className="primary-btn full" disabled={busy}>{busy ? <InlineLoader>{register ? "Sending code…" : "Signing you in…"}</InlineLoader> : register ? "Create account →" : "Sign in →"}</button></form><div className="switch">{register ? "Already have an account?" : "New to SRS AI?"} <button onClick={changeMode}>{register ? "Sign in" : "Create account"}</button></div></>}</div></section></main>;
+ const googleLogin = async (response) => {
+  setBusy(true);
+  setError("");
+  setGoogleProgress(10);
+
+  const progressTimer = setInterval(() => {
+    setGoogleProgress((current) => {
+      if (current >= 90) {
+        clearInterval(progressTimer);
+        return current;
+      }
+
+      return current + 10;
+    });
+  }, 200);
+
+  try {
+    const result = await api("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({
+        credential: response.credential
+      })
+    });
+
+    setGoogleProgress(100);
+await new Promise((resolve) => setTimeout(resolve, 800));
+    onLogin(result);
+  } catch (err) {
+    setError(err.message);
+    setGoogleProgress(0);
+  } finally {
+    clearInterval(progressTimer);
+    setBusy(false);
+  }
+};
+  return <main className="auth-page"><section className="brand-panel"><Brand /><div className="brand-content"><small>✦ AI-POWERED REQUIREMENTS</small><h1>Requirements,<br />made <em>clear.</em></h1><p>Turn early-stage software ideas into complete, structured requirements your whole team can understand.</p><b>✓ Ask the right clarification questions</b><b>✓ Generate a professional SRS in minutes</b><b>✓ Keep every version in one workspace</b></div><footer>© 2026 SRS AI · Build with confidence</footer></section><section className="form-panel"><div className="auth-card">{verification ? <><small>EMAIL VERIFICATION</small><h2>Check your inbox</h2><p>We sent a six-digit verification code to <b>{verification}</b>.</p><form onSubmit={verify} className="otp-form"><label>Verification code<input className="otp-input" required inputMode="numeric" autoComplete="one-time-code" maxLength="6" placeholder="000000" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} /></label>{error && <div className="message error">{error}</div>}<button className="primary-btn full" disabled={busy || code.length !== 6}>{busy ? <InlineLoader>Verifying…</InlineLoader> : "Verify email →"}</button></form><div className="switch"><button onClick={() => setVerification(null)}>← Use a different email</button></div></> : <><small>{register ? "START FOR FREE" : "WELCOME BACK"}</small><h2>{register ? "Create your account" : "Welcome back"}</h2><p>{register ? "We will verify your email before creating your workspace." : "Sign in to continue to your workspace."}</p><form onSubmit={submit}>{register && <label>Full name<input required minLength="2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>}<label>Email address<input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label><label>Password
+  <div className="password-field">
+    <input
+      required
+      minLength="8"
+      type={showPassword ? "text" : "password"}
+
+      value={form.password}
+      onChange={(e) => setForm({ ...form, password: e.target.value })}
+    />
+    <button
+      type="button"
+      className="password-toggle"
+      onClick={() => setShowPassword(!showPassword)}
+      aria-label={showPassword ? "Hide password" : "Show password"}
+    >
+      {showPassword ? "🙈" : "👁"}
+    </button>
+  </div>
+</label>{error && <div className="message error">{error}</div>}<button className="primary-btn full" disabled={busy}>
+{busy && !register && googleProgress === 0 ? (
+      <div className="login-progress">
+      <span>Signing in... {loginProgress}%</span>
+
+      <div className="login-progress-bar">
+        <div
+          className="login-progress-fill"
+          style={{ width: `${loginProgress}%` }}
+        ></div>
+      </div>
+    </div>
+  ) : busy && register ? (
+    <InlineLoader>Sending code…</InlineLoader>
+  ) : (
+    register ? "Create account →" : "Sign in →"
+  )}
+</button></form>
+
+
+{!register && (
+  <>
+<div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    width: "100%",
+    gap: "12px",
+    margin: "22px 0",
+  }}
+>
+  <div
+    style={{
+      flex: 1,
+      height: "1px",
+      backgroundColor: "#e5eaeb",
+    }}
+  />
+
+  <span
+    style={{
+      color: "#9aa5a8",
+      fontSize: "9px",
+      fontWeight: 700,
+      letterSpacing: "1px",
+    }}
+  >
+    OR
+  </span>
+
+  <div
+    style={{
+      flex: 1,
+      height: "1px",
+      backgroundColor: "#e5eaeb",
+    }}
+  />
+  
+</div>
+<div className="google-login-wrapper">
+
+  <div
+    id="google-login-button"
+    style={{
+      display: googleProgress > 0 ? "none" : "block"
+    }}
+    ref={(element) => {
+      if (element && window.google && !element.hasChildNodes()) {
+        window.google.accounts.id.initialize({
+          client_id: "550669966742-j4skr00ft24feoluajdn2jcu9fgl61jb.apps.googleusercontent.com",
+          callback: googleLogin
+        });
+
+        window.google.accounts.id.renderButton(element, {
+          theme: "outline",
+          size: "large",
+          width: "100%",
+          text: "continue_with"
+        });
+      }
+    }}
+  ></div>
+
+  {googleProgress > 0 && (
+    <div className="google-progress">
+      <span>Signing in with Google... {googleProgress}%</span>
+
+      <div className="login-progress-bar">
+        <div
+          className="login-progress-fill"
+          style={{ width: `${googleProgress}%` }}
+        ></div>
+      </div>
+    </div>
+  )}
+
+</div>
+  </>
+)}
+
+<div className="switch">{register ? "Already have an account?" : "New to SRS AI?"} <button onClick={changeMode}>{register ? "Sign in" : "Create account"}</button></div></>}</div></section></main>;
 }
 
 function Sidebar({ user, page, navigate, logout }) {

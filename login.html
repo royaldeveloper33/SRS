@@ -14,7 +14,7 @@
 
   <!-- Professional icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-
+<script src="https://accounts.google.com/gsi/client"></script>
   <style>
     /* =========================================================
        1. GLOBAL DESIGN
@@ -319,24 +319,28 @@
     /* =========================================================
        11. DIVIDER
        ========================================================= */
-    .divider {
-      margin: 21px 0;
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      color: #a0aaad;
-      font-size: 8px;
-      font-weight: 600;
-    }
+  .divider {
+  margin: 21px 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: #a0aaad;
+  font-size: 8px;
+  font-weight: 600;
+}
 
-    .divider::before,
-    .divider::after {
-      content: "";
-      height: 1px;
-      flex: 1;
-      background: var(--border);
-    }
+.divider::before,
+.divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+}
 
+.divider span {
+  flex: 0 0 auto;
+  text-align: center;
+}
     /* =========================================================
        12. FORM FIELDS
        ========================================================= */
@@ -787,11 +791,9 @@
             Continue with Google
           </button>
 
-          <!-- Divider -->
-          <div class="divider">
-            OR CONTINUE WITH EMAIL
-          </div>
-
+<div class="divider">
+  <span>OR</span>
+</div>
           <!-- Login message -->
           <div
             id="loginMessage"
@@ -1169,6 +1171,7 @@
 
 
   <script>
+    let toastTimer;
     /* =========================================================
        1. INITIALIZE ICONS
        ========================================================= */
@@ -1626,23 +1629,73 @@
     /* =========================================================
        9. CONTINUE WITH GOOGLE
        ========================================================= */
-    function continueWithGoogle() {
+function continueWithGoogle() {
 
-      /*
-        This is currently a frontend placeholder.
+  if (!window.google) {
+    showMessage(
+      "loginMessage",
+      "error",
+      "Google Sign-In is still loading. Please try again."
+    );
+    return;
+  }
 
-        Later connect this button with:
+  google.accounts.id.initialize({
+    client_id: "550669966742-j4skr00ft24feoluajdn2jcu9fgl61jb.apps.googleusercontent.com",
+    callback: handleGoogleLogin
+  });
 
-        - Google OAuth
-        - Firebase Authentication
-        - Supabase Auth
-        - Your own backend authentication
-      */
+  google.accounts.id.prompt();
+}
+async function handleGoogleLogin(response) {
 
-      showToast(
-        "Google authentication will be connected to your backend."
+  try {
+
+    const result = await fetch("http://localhost:5000/api/auth/google", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        credential: response.credential
+      })
+    });
+
+    const data = await result.json();
+
+    if (!result.ok) {
+      showMessage(
+        "loginMessage",
+        "error",
+        data.error || "Google login failed."
       );
+      return;
     }
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    showMessage(
+      "loginMessage",
+      "success",
+      "Google login successful!"
+    );
+
+    setTimeout(function() {
+      window.location.href = "dashboard.html";
+    }, 800);
+
+  } catch (error) {
+
+    console.error("Google login error:", error);
+
+    showMessage(
+      "loginMessage",
+      "error",
+      "Unable to connect to the server."
+    );
+  }
+}
 
 
     /* =========================================================
@@ -1705,8 +1758,6 @@
     /* =========================================================
        12. TOAST MESSAGE
        ========================================================= */
-    let toastTimer;
-
     function showToast(message) {
 
       const toast =

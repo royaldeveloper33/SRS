@@ -4,9 +4,9 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server: {
-    proxy: {
-      '/api': 'http://localhost:5000',
-    },
+ server: {
+allowedHosts: ['merchandise-stronger-also-beta.trycloudflare.com'],proxy: {
+    '/api': 'http://localhost:5000',
   },
+},
 })
