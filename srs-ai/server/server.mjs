@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import bcrypt from "bcryptjs";
+import { OAuth2Client } from "google-auth-library";
 import crypto from "node:crypto";
 import PDFDocument from "pdfkit";
 import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
@@ -8,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client.ts";
-
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is missing from .env");
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
@@ -134,10 +135,69 @@ app.post("/api/auth/verify-email", handle(async (request, response) => {
 app.post("/api/auth/login", handle(async (request, response) => {
   const email = typeof request.body.email === "string" ? request.body.email.trim().toLowerCase() : "";
   const password = request.body.password;
-  if (!email || typeof password !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error: "A valid email and password are required" });
-  const user = await prisma.users.findUnique({ where: { email } });
+if (!email || typeof password !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error: "A valid email and password are required" });  const user = await prisma.users.findUnique({ where: { email } });
   if (!user || typeof password !== "string" || !(await bcrypt.compare(password, user.password_hash))) return response.status(401).json({ error: "Incorrect email or password" });
   if (!user.email_verified) return response.status(403).json({ error: "Verify your email before signing in" });
+  return response.json(authResponse(user));
+}));
+app.post("/api/auth/google", handle(async (request, response) => {
+  const { credential } = request.body;
+
+  if (typeof credential !== "string" || !credential) {
+    return response.status(400).json({
+      error: "Google credential is required"
+    });
+  }
+
+  const ticket = await googleClient.verifyIdToken({
+    idToken: credential,
+    audience: process.env.GOOGLE_CLIENT_ID
+  });
+
+  const payload = ticket.getPayload();
+
+  if (!payload?.sub || !payload?.email || !payload.email_verified) {
+    return response.status(401).json({
+      error: "Invalid Google account"
+    });
+  }
+
+  const googleId = payload.sub;
+  const email = payload.email.trim().toLowerCase();
+  const name = payload.name || email.split("@")[0];
+
+  let user = await prisma.users.findUnique({
+    where: { google_id: googleId }
+  });
+
+  if (!user) {
+    user = await prisma.users.findUnique({
+      where: { email }
+    });
+  }
+
+  if (user) {
+    user = await prisma.users.update({
+      where: { id: user.id },
+      data: {
+        google_id: googleId,
+        email_verified: true
+      }
+    });
+  } else {
+    const randomPassword = crypto.randomBytes(32).toString("hex");
+
+    user = await prisma.users.create({
+      data: {
+        name,
+        email,
+        password_hash: await bcrypt.hash(randomPassword, 12),
+        google_id: googleId,
+        email_verified: true
+      }
+    });
+  }
+
   return response.json(authResponse(user));
 }));
 app.get("/api/health", (_request, response) => response.json({ message: "SRS AI API is running" }));

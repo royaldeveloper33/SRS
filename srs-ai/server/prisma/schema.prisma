@@ -8,12 +8,21 @@ datasource db {
 }
 
 model clarification_questions {
-  id         Int       @id @default(autoincrement())
-  project_id Int
-  question   String
-  answer     String?
-  created_at DateTime? @default(now()) @db.Timestamp(6)
-  projects   projects  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id               Int                @id @default(autoincrement())
+  project_id       Int
+  question         String
+  answer           String?
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  step             Int?
+  category         String?            @db.VarChar(100)
+  help_text        String?
+  answer_type      String             @default("text") @db.VarChar(30)
+  choices          Json?
+  selected_choices Json?
+  projects         projects           @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  question_answers question_answers[]
+
+  @@index([project_id])
 }
 
 model projects {
@@ -24,22 +33,39 @@ model projects {
   created_at              DateTime?                 @default(now()) @db.Timestamp(6)
   updated_at              DateTime?                 @default(now()) @db.Timestamp(6)
   status                  String                    @default("draft") @db.VarChar(30)
+  project_type            String                    @default("Web Application") @db.VarChar(100)
+  target_users            String?
+  technologies            String?
+  workflow                Json?
+  design                  Json?
+  analysis                Json?
+  progress                Int                       @default(0)
   clarification_questions clarification_questions[]
+  code_artifacts          code_artifacts[]
+  code_reviews            code_reviews[]
+  document_exports        document_exports[]
+  project_features        project_features[]
+  project_forms           project_forms[]
+  project_requirements    project_requirements[]
   users                   users                     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   srs_documents           srs_documents[]
-  document_exports        document_exports[]
+  translations            translations[]
+
+  @@index([user_id])
 }
 
 model srs_documents {
-  id         Int       @id @default(autoincrement())
-  project_id Int
-  title      String    @db.VarChar(255)
-  content    Json?
-  version    Int?      @default(1)
-  created_at DateTime? @default(now()) @db.Timestamp(6)
-  updated_at DateTime? @default(now()) @db.Timestamp(6)
-  projects   projects  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id           Int            @id @default(autoincrement())
+  project_id   Int
+  title        String         @db.VarChar(255)
+  content      Json?
+  version      Int?           @default(1)
+  created_at   DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at   DateTime?      @default(now()) @db.Timestamp(6)
+  projects     projects       @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   srs_versions srs_versions[]
+
+  @@index([project_id])
 }
 
 model srs_versions {
@@ -49,6 +75,8 @@ model srs_versions {
   version         Int
   created_at      DateTime?     @default(now()) @db.Timestamp(6)
   srs_documents   srs_documents @relation(fields: [srs_document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([srs_document_id], map: "srs_versions_document_id_idx")
 }
 
 model document_exports {
@@ -58,18 +86,135 @@ model document_exports {
   storage_url String
   created_at  DateTime? @default(now()) @db.Timestamp(6)
   projects    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([project_id])
 }
 
 model users {
-  id            Int        @id @default(autoincrement())
-  name          String     @db.VarChar(100)
-  email         String     @unique @db.VarChar(255)
-  password_hash String
-  api_key_hash String?
-  api_key_created_at DateTime? @db.Timestamp(6)
-  email_verified Boolean @default(false)
-  email_otp_hash String?
-  email_otp_expires_at DateTime? @db.Timestamp(6)
-  created_at    DateTime?  @default(now()) @db.Timestamp(6)
-  projects      projects[]
+  id                   Int                @id @default(autoincrement())
+  name                 String             @db.VarChar(100)
+  email                String             @unique @db.VarChar(255)
+  password_hash        String
+    google_id            String?            @unique @db.VarChar(255)
+  created_at           DateTime?          @default(now()) @db.Timestamp(6)
+  api_key_hash         String?
+  api_key_created_at   DateTime?          @db.Timestamp(6)
+  email_verified       Boolean            @default(false)
+  email_otp_hash       String?
+  email_otp_expires_at DateTime?          @db.Timestamp(6)
+  profile_image        String?
+  projects             projects[]
+  question_answers     question_answers[]
+  team_invitations     team_invitations[]
+}
+
+model code_artifacts {
+  id          Int       @id @default(autoincrement())
+  project_id  Int
+  language    String    @db.VarChar(100)
+  feature     String
+  code        String
+  explanation String?
+  metadata    Json?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  projects    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model code_reviews {
+  id         Int       @id @default(autoincrement())
+  project_id Int
+  language   String?   @db.VarChar(100)
+  code       String
+  result     Json?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  projects   projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model form_fields {
+  id            Int           @id @default(autoincrement())
+  form_id       Int
+  label         String
+  field_type    String        @default("text") @db.VarChar(30)
+  required      Boolean       @default(false)
+  placeholder   String?
+  validation    String?
+  sort_order    Int           @default(0)
+  project_forms project_forms @relation(fields: [form_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model project_features {
+  id          Int       @id @default(autoincrement())
+  project_id  Int
+  name        String
+  description String?
+  selected    Boolean   @default(true)
+  priority    String    @default("Medium") @db.VarChar(20)
+  source      String    @default("ai") @db.VarChar(20)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  projects    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model project_forms {
+  id           Int           @id @default(autoincrement())
+  project_id   Int
+  name         String
+  description  String?
+  submit_label String        @default("Submit")
+  created_at   DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at   DateTime?     @default(now()) @db.Timestamp(6)
+  form_fields  form_fields[]
+  projects     projects      @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model project_requirements {
+  id                  Int       @id @default(autoincrement())
+  project_id          Int
+  code                String    @db.VarChar(30)
+  title               String
+  description         String?
+  type                String    @default("Functional") @db.VarChar(30)
+  priority            String    @default("Medium") @db.VarChar(20)
+  status              String    @default("Draft") @db.VarChar(20)
+  acceptance_criteria String?
+  source_feature_id   Int?
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+  updated_at          DateTime? @default(now()) @db.Timestamp(6)
+  projects            projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model question_answers {
+  id                      Int                     @id @default(autoincrement())
+  question_id             Int
+  user_id                 Int
+  answer                  String?
+  selected_choices        Json?
+  created_at              DateTime?               @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?               @default(now()) @db.Timestamp(6)
+  clarification_questions clarification_questions @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                   users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([question_id, user_id])
+}
+
+model team_invitations {
+  id          Int       @id @default(autoincrement())
+  inviter_id  Int
+  email       String    @db.VarChar(255)
+  token_hash  String    @unique @db.VarChar(64)
+  expires_at  DateTime  @db.Timestamp(6)
+  accepted_at DateTime? @db.Timestamp(6)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  users       users     @relation(fields: [inviter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([inviter_id])
+}
+
+model translations {
+  id          Int       @id @default(autoincrement())
+  project_id  Int
+  document_id Int?
+  language    String    @db.VarChar(80)
+  content     Json?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  projects    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
