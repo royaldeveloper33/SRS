@@ -49,8 +49,13 @@ const verifyToken = (token) => {
   if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) throw new Error("Token expired");
   return payload;
 };
-const publicUser = (user) => ({ id: user.id, name: user.name, email: user.email, created_at: user.created_at });
-const authResponse = (user) => ({ user: publicUser(user), token: signToken({ sub: user.id, email: user.email }) });
+const publicUser = (user) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  created_at: user.created_at,
+  profile_image: user.profile_image || ""
+});const authResponse = (user) => ({ user: publicUser(user), token: signToken({ sub: user.id, email: user.email }) });
 const parseId = (value) => Number.isInteger(Number(value)) && Number(value) > 0 ? Number(value) : null;
 const ownedProject = (userId, projectId) => prisma.projects.findFirst({ where: { id: projectId, user_id: userId }, select: { id: true } });
 const requireAuth = (request, response, next) => {
@@ -73,13 +78,12 @@ const geminiGenerate = async (prompt, { jsonResponse = false } = {}) => {
     error.statusCode = 503;
     throw error;
   }
-  const configuredModel = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const configuredModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const models = [...new Set([configuredModel, "gemini-3.6-flash"])];
   let response;
   let payload;
   for (const model of models) {
-    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {
-      method: "POST",
+response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
@@ -209,12 +213,16 @@ app.get("/api/usage", (_request, response) => {
   return response.json({ used: geminiTokensUsed, limit, remaining: Math.max(0, limit - geminiTokensUsed), model: process.env.GEMINI_MODEL || "gemini-3.6-flash" });
 });
 app.patch("/api/me", handle(async (request, response) => {
-  const { name, email } = request.body;
+const { name, email, profile_image } = request.body;
   if (typeof name !== "string" || name.trim().length < 2 || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return response.status(400).json({ error: "A valid name and email are required" });
   const normalizedEmail = email.trim().toLowerCase();
   const existing = await prisma.users.findFirst({ where: { email: normalizedEmail, NOT: { id: request.user.id } }, select: { id: true } });
   if (existing) return response.status(409).json({ error: "That email is already in use" });
-  const user = await prisma.users.update({ where: { id: request.user.id }, data: { name: name.trim(), email: normalizedEmail } });
+  const user = await prisma.users.update({ where: { id: request.user.id }, data: {
+  name: name.trim(),
+  email: normalizedEmail,
+  profile_image: typeof profile_image === "string" ? profile_image : undefined
+} });
   return response.json(publicUser(user));
 }));
 app.post("/api/me/password", handle(async (request, response) => {
