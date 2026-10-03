@@ -94,3 +94,168 @@
   border-radius: 10px;
   transition: width 0.2s ease;
 }
+
+@media (min-width: 701px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 5;
+    width: 72px;
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: width 220ms ease;
+  }
+
+  .sidebar:hover,
+  .sidebar:focus-within {
+    width: 250px;
+  }
+
+  .sidebar .brand span:not(.brand-mark),
+  .sidebar > small,
+  .sidebar nav span,
+  .profile > div {
+    display: initial;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 140ms ease, visibility 140ms ease;
+  }
+
+  .sidebar > small {
+    display: block;
+  }
+
+  .sidebar nav span,
+  .profile > div {
+    display: block;
+  }
+
+  .sidebar nav span {
+    display: inline-block;
+    max-width: 0;
+    width: 0;
+    overflow: hidden;
+    vertical-align: middle;
+    transition: max-width 220ms ease, opacity 140ms ease, visibility 140ms ease;
+  }
+
+  .sidebar:hover .brand span:not(.brand-mark),
+  .sidebar:hover > small,
+  .sidebar:hover nav span,
+  .sidebar:hover .profile > div,
+  .sidebar:focus-within .brand span:not(.brand-mark),
+  .sidebar:focus-within > small,
+  .sidebar:focus-within nav span,
+  .sidebar:focus-within .profile > div {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 60ms;
+  }
+
+  .sidebar .brand {
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  .sidebar nav button {
+    text-align: center;
+  }
+
+  .sidebar:hover .brand,
+  .sidebar:focus-within .brand {
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+
+  .sidebar:hover nav button,
+  .sidebar:focus-within nav button {
+    padding: 0 12px;
+    text-align: left;
+  }
+
+  .sidebar:hover nav span,
+  .sidebar:focus-within nav span {
+    max-width: 160px;
+    width: auto;
+  }
+
+  .profile {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .profile button {
+    margin-left: 0;
+  }
+
+  .sidebar:hover .profile,
+  .sidebar:focus-within .profile {
+    flex-direction: row;
+  }
+
+  .sidebar:hover .profile button,
+  .sidebar:focus-within .profile button {
+    margin-left: auto;
+  }
+
+  .main {
+    margin-left: 72px;
+  }
+}
+
+.project-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.summary-card {
+  min-width: 0;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.summary-card > i {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--dark);
+  font-size: 17px;
+  font-style: normal;
+}
+
+.summary-card > div {
+  min-width: 0;
+}
+
+.summary-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.summary-card b {
+  display: block;
+  margin-top: 4px;
+  font: 700 22px/1.1 'Space Grotesk';
+}
+
+@media (max-width: 1000px) {
+  .project-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
