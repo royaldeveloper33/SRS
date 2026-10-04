@@ -19,3 +19,4 @@ server/.devin/
 
 # Workspace cache
 .npm-cache/
+.vercel
