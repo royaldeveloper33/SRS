@@ -94,3 +94,125 @@
   border-radius: 10px;
   transition: width 0.2s ease;
 }
+/* Profile photo */
+.profile-photo-section {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 4px 0 28px;
+}
+
+.profile-photo {
+  width: 108px;
+  height: 108px;
+  min-width: 108px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #19a974;
+  border: none;
+}
+
+.profile-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-photo span {
+  font-size: 38px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.profile-photo-section .photo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  height: 52px;
+  padding: 0 22px;
+
+  background: #ffffff;
+  color: #19a974;
+
+  border: 1px solid #cfe3da;
+  border-radius: 8px;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.profile-photo-section .photo-btn:hover {
+  background: #eaf9f2;
+  border-color: #19a974;
+}
+
+.profile-photo-section .photo-btn input {
+  display: none;
+}
+
+.profile-photo-section small {
+  display: block;
+
+  margin-top: 12px;
+
+  color: #718096;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.profile-photo-section small {
+  display: block;
+  margin-top: 7px;
+  color: #7a8781;
+  font-size: 12px;
+}
+.photo-camera-icon {
+  width: 18px;
+  height: 18px;
+  color: #19a974;
+  flex-shrink: 0;
+}
+.sidebar-profile-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.sidebar-profile-avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100%;
+  min-height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  display: block;
+  border-radius: 50% !important;
+}
+.sidebar-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

@@ -20,7 +20,7 @@ const InlineLoader = ({ children = "Working…" }) => <span className="inline-lo
 const questionChoices = (question) => { const match = question.match(/\[([^\]]+)\]/); if (match) return match[1].split("|").map((item) => item.trim()).filter(Boolean); return /^(do |is |are |will |can |should |does |has |have )/i.test(question.trim()) ? ["Yes", "No"] : []; };
 
 function Auth({ onLogin }) {
-  const [register, setRegister] = useState(false);const [loginProgress, setLoginProgress] = useState(0); const [googleProgress, setGoogleProgress] = useState(0); const [verification, setVerification] = useState(null); const [form, setForm] = useState({ name: "", email: "", password: "" }); const [code, setCode] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const [showPassword, setShowPassword] = useState(false);
+  const [register, setRegister] = useState(false);const [loginProgress, setLoginProgress] = useState(0); const [googleProgress, setGoogleProgress] = useState(0); const [verification, setVerification] = useState(null); const [form, setForm] = useState({ name: "", email: "", password: "" }); const [code, setCode] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);const [srsProgress, setSrsProgress] = useState(0); const [showPassword, setShowPassword] = useState(false);
 const submit = async (event) => {
   event.preventDefault();
   setBusy(true);
@@ -223,36 +223,164 @@ await new Promise((resolve) => setTimeout(resolve, 800));
 }
 
 function Sidebar({ user, page, navigate, logout }) {
-  return <aside className="sidebar"><Brand /><small>WORKSPACE</small><nav><button className={page === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}>▦ <span>Dashboard</span></button><button className={page === "project" ? "active" : ""} onClick={() => navigate("dashboard")}>▤ <span>Projects</span></button><button className={page === "templates" ? "active" : ""} onClick={() => navigate("templates")}>▱ <span>Templates</span></button><button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}>⚙ <span>Settings</span></button></nav><div className="spacer" /><div className="profile"><i>{initials(user.name)}</i><div><b>{user.name}</b><span>{user.email}</span></div><button onClick={logout}>↪</button></div></aside>;
+  return <aside className="sidebar"><Brand /><small>WORKSPACE</small><nav><button className={page === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}>▦ <span>Dashboard</span></button><button className={page === "project" ? "active" : ""} onClick={() => navigate("dashboard")}>▤ <span>Projects</span></button><button className={page === "templates" ? "active" : ""} onClick={() => navigate("templates")}>▱ <span>Templates</span></button><button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}>⚙ <span>Settings</span></button></nav><div className="spacer" /><div className="profile"><i className="sidebar-profile-avatar">
+  {user.profile_image || user.profilePhoto ? (
+    <img
+      src={user.profile_image || user.profilePhoto}
+      alt="Profile"
+    />
+  ) : (
+    initials(user.name)
+  )}
+</i><div><b>{user.name}</b><span>{user.email}</span></div><button onClick={logout}>↪</button></div></aside>;
 }
 
 function MobileNav({ page, navigate }) { return <nav className="mobile-nav" aria-label="Main navigation"><button className={page === "dashboard" || page === "project" ? "active" : ""} onClick={() => navigate("dashboard")}><i>▦</i><span>Projects</span></button><button className={page === "templates" ? "active" : ""} onClick={() => navigate("templates")}><i>▱</i><span>Templates</span></button><button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}><i>⚙</i><span>Settings</span></button></nav>; }
 
 function Layout({ user, page, navigate, logout, children }) { return <div className="app"><Sidebar {...{ user, page, navigate, logout }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span></header>{children}</main><MobileNav {...{ page, navigate }} /></div>; }
 
-function Dashboard({ user, navigate, openProject, logout }) {
-  const [projects, setProjects] = useState([]); const [search, setSearch] = useState(""); const [status, setStatus] = useState(""); const [sort, setSort] = useState("updated"); const [form, setForm] = useState({ name: "", clientIdea: "" }); const [showCreate, setShowCreate] = useState(false); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
-  const load = useCallback(async () => { setLoading(true); try { setProjects(await api(`/api/projects?search=${encodeURIComponent(search)}&status=${status}&sort=${sort}`)); } catch (err) { setError(err.message); } finally { setLoading(false); } }, [search, status, sort]);
-  useEffect(() => { const timer = setTimeout(load, 180); return () => clearTimeout(timer); }, [load]);
+function Dashboard({ user, navigate, openProject, logout }) {const [loading, setLoading] = useState(true);
+const [projectProgress, setProjectProgress] = useState(0);
+  const [projects, setProjects] = useState([]); const [search, setSearch] = useState(""); const [status, setStatus] = useState(""); const [sort, setSort] = useState("updated"); const [form, setForm] = useState({ name: "", clientIdea: "" }); const [showCreate, setShowCreate] = useState(false); const [error, setError] = useState("");  
+const load = useCallback(async () => {
+  setLoading(true);
+  setProjectProgress(10);
+
+  const progressTimer = window.setInterval(() => {
+    setProjectProgress((value) => {
+      if (value >= 90) return value;
+      if (value < 40) return 40;
+      if (value < 70) return 70;
+      return 90;
+    });
+  }, 400);
+
+  try {
+    const result = await api(
+      `/api/projects?search=${encodeURIComponent(search)}&status=${status}&sort=${sort}`
+    );
+
+    setProjects(result);
+    setProjectProgress(100);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    window.clearInterval(progressTimer);
+    setLoading(false);
+    setProjectProgress(0);
+  }
+}, [search, status, sort]);  useEffect(() => { const timer = setTimeout(load, 180); return () => clearTimeout(timer); }, [load]);
   const create = async (event) => { event.preventDefault(); try { const project = await api("/api/projects", { method: "POST", body: JSON.stringify(form) }); setShowCreate(false); setForm({ name: "", clientIdea: "" }); openProject(project.id); } catch (err) { setError(err.message); } };
   const remove = async (project) => { if (!window.confirm(`Delete ${project.name}? This permanently removes its SRS, versions, and exports.`)) return; try { await api(`/api/projects/${project.id}`, { method: "DELETE" }); await load(); } catch (err) { setError(err.message); } };
-  return <Layout user={user} page="dashboard" navigate={navigate} logout={logout}><section className="content"><div className="welcome"><div><small>YOUR WORKSPACE</small><h1>Good to see you, {user.name.split(" ")[0]}.</h1><p>Turn ideas into requirements your team can build with confidence.</p></div><button className="primary-btn" onClick={() => setShowCreate(true)}>＋ New project</button></div>{error && <div className="message error">{error}</div>}<div className="toolbar"><input placeholder="Search projects…" value={search} onChange={(e) => setSearch(e.target.value)} /><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="in_progress">In progress</option><option value="complete">Complete</option><option value="archived">Archived</option></select><select value={sort} onChange={(e) => setSort(e.target.value)}><option value="updated">Recently updated</option><option value="name">Name</option></select></div><section className="panel">{loading ? <GenerateLoader label="Loading your projects" detail="Getting your workspace ready…" /> : projects.length === 0 ? <div className="empty"><b>{search || status ? "No matching projects" : "Your workspace is empty"}</b><span>{search || status ? "Try a different filter." : "Create your first project to get started."}</span></div> : <><div className="project-row header"><span>Project</span><span>Status</span><span>Updated</span><span /></div>{projects.map((project) => <div className="project-row" key={project.id}><button className="project-link" onClick={() => openProject(project.id)}><i>▤</i><span><b>{project.name}</b></span></button><span className="status">{project.status.replace("_", " ")}</span><span>{date(project.updated_at)}</span><button className="row-delete" title={`Delete ${project.name}`} onClick={() => remove(project)}>×</button></div>)}</>}</section></section>{showCreate && <Modal title="Create a project" onClose={() => setShowCreate(false)}><form onSubmit={create}><label>Project name<input required maxLength="255" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label><label>What are you building?<textarea required rows="5" value={form.clientIdea} onChange={(e) => setForm({ ...form, clientIdea: e.target.value })} /></label><button className="primary-btn full">Create project →</button></form></Modal>}</Layout>;
+  return <Layout user={user} page="dashboard" navigate={navigate} logout={logout}><section className="content"><div className="welcome"><div><small>YOUR WORKSPACE</small><h1>Good to see you, {user.name.split(" ")[0]}.</h1><p>Turn ideas into requirements your team can build with confidence.</p></div><button className="primary-btn" onClick={() => setShowCreate(true)}>＋ New project</button></div>{error && <div className="message error">{error}</div>}<div className="toolbar"><input placeholder="Search projects…" value={search} onChange={(e) => setSearch(e.target.value)} /><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="in_progress">In progress</option><option value="complete">Complete</option><option value="archived">Archived</option></select><select value={sort} onChange={(e) => setSort(e.target.value)}><option value="updated">Recently updated</option><option value="name">Name</option></select></div><section className="panel">{loading ? <GenerateLoader
+  label={`Opening your project... ${projectProgress}%`}
+  detail="Loading your requirements workspace…"
+  progress={projectProgress}
+/> : projects.length === 0 ? <div className="empty"><b>{search || status ? "No matching projects" : "Your workspace is empty"}</b><span>{search || status ? "Try a different filter." : "Create your first project to get started."}</span></div> : <><div className="project-row header"><span>Project</span><span>Status</span><span>Updated</span><span /></div>{projects.map((project) => <div className="project-row" key={project.id}><button className="project-link" onClick={() => openProject(project.id)}><i>▤</i><span><b>{project.name}</b></span></button><span className="status">{project.status.replace("_", " ")}</span><span>{date(project.updated_at)}</span><button className="row-delete" title={`Delete ${project.name}`} onClick={() => remove(project)}>×</button></div>)}</>}</section></section>{showCreate && <Modal title="Create a project" onClose={() => setShowCreate(false)}><form onSubmit={create}><label>Project name<input required maxLength="255" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label><label>What are you building?<textarea required rows="5" value={form.clientIdea} onChange={(e) => setForm({ ...form, clientIdea: e.target.value })} /></label><button className="primary-btn full">Create project →</button></form></Modal>}</Layout>;
 }
 
 function Project({ user, id, navigate, logout }) {
-  const [project, setProject] = useState(null); const [draft, setDraft] = useState(""); const [answers, setAnswers] = useState({}); const [versions, setVersions] = useState([]); const [exports, setExports] = useState([]); const [note, setNote] = useState(""); const [busy, setBusy] = useState(false); const [deleteProgress, setDeleteProgress] = useState(0);
-  const load = useCallback(async () => { const value = await api(`/api/projects/${id}`); setProject(value); setDraft(value.srs_documents?.[0]?.content?.text || ""); setExports(await api(`/api/projects/${id}/exports`)); }, [id]);
+  const [project, setProject] = useState(null); const [draft, setDraft] = useState(""); const [answers, setAnswers] = useState({}); const [versions, setVersions] = useState([]); const [exports, setExports] = useState([]); const [note, setNote] = useState(""); const [busy, setBusy] = useState(false); const [srsProgress, setSrsProgress] = useState(0); const [projectProgress, setProjectProgress] = useState(0);  const [deleteProgress, setDeleteProgress] = useState(0);
+  const load = useCallback(async () => {
+  setProjectProgress(10);
+
+  const progressTimer = window.setInterval(() => {
+    setProjectProgress((value) => {
+      if (value >= 90) return value;
+      if (value < 40) return 40;
+      if (value < 70) return 70;
+      return 90;
+    });
+  }, 400);
+
+  try {
+    const value = await api(`/api/projects/${id}`);
+
+    setProjectProgress(70);
+
+    const projectExports = await api(`/api/projects/${id}/exports`);
+
+    setProjectProgress(100);
+
+    await new Promise((resolve) => window.setTimeout(resolve, 400));
+
+    setProject(value);
+    setDraft(value.srs_documents?.[0]?.content?.text || "");
+    setExports(projectExports);
+  } finally {
+    window.clearInterval(progressTimer);
+  }
+}, [id]);
   useEffect(() => { load().catch((err) => setNote(err.message)); }, [load]);
-  if (!project) return <Layout user={user} page="project" navigate={navigate} logout={logout}><div className="content"><GenerateLoader label="Opening your project" detail="Loading your requirements workspace…" /></div></Layout>;
+  if (!project) return <Layout user={user} page="project" navigate={navigate} logout={logout}><div className="content"><GenerateLoader
+  label={`Opening your project... ${projectProgress}%`}
+  detail="Loading your requirements workspace…"
+  progress={projectProgress}
+/></div></Layout>;
   const latest = project.srs_documents?.[0];
   const save = async () => { setBusy("save"); try { await (latest ? api(`/api/documents/${latest.id}`, { method: "PATCH", body: JSON.stringify({ content: { text: draft } }) }) : api(`/api/projects/${id}/documents`, { method: "POST", body: JSON.stringify({ title: "Software Requirements Specification", content: { text: draft } }) })); setNote("SRS draft saved."); await load(); } catch (err) { setNote(err.message); } finally { setBusy(false); } };
   const saveAnswer = async (questionId) => { setBusy(`answer-${questionId}`); try { await api(`/api/questions/${questionId}`, { method: "PATCH", body: JSON.stringify({ answer: answers[questionId] }) }); setNote("Answer saved."); await load(); } catch (err) { setNote(err.message); } finally { setBusy(false); } };
-  const generate = async (kind) => { setBusy(kind); try { await api(`/api/projects/${id}/ai/${kind}`, { method: "POST" }); setNote(kind === "questions" ? "Questions generated. Answer them before generating the final SRS." : "Simple SRS generated with user features, developer notes, time, and cost estimates."); await load(); } catch (err) { setNote(err.message); } finally { setBusy(false); } };
-  const showVersions = async () => { if (!latest) return; setBusy("history"); try { setVersions(await api(`/api/documents/${latest.id}/versions`)); } finally { setBusy(false); } };
+const generate = async (kind) => {
+  setBusy(kind);
+
+  if (kind === "srs") {
+    setSrsProgress(10);
+
+    const progressTimer = window.setInterval(() => {
+      setSrsProgress((value) => {
+        if (value >= 90) return value;
+        if (value < 40) return 40;
+        if (value < 70) return 70;
+        return 90;
+      });
+    }, 1200);
+
+    try {
+    const generated = await api(`/api/projects/${id}/ai/${kind}`, {
+  method: "POST"
+});
+      setSrsProgress(100);
+
+      setNote(
+        "Simple SRS generated with user features, developer notes, time, and cost estimates."
+      );
+
+      await load();
+      setDraft(generated.content?.text || "");
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+    } catch (err) {
+      setNote(err.message);
+    } finally {
+      window.clearInterval(progressTimer);
+      setBusy(false);
+      setSrsProgress(0);
+    }
+
+    return;
+  }
+
+  try {
+    await api(`/api/projects/${id}/ai/${kind}`, {
+      method: "POST"
+    });
+
+    setNote(
+      "Questions generated. Answer them before generating the final SRS."
+    );
+
+    await load();
+  } catch (err) {
+    setNote(err.message);
+  } finally {
+    setBusy(false);
+  }
+};  const showVersions = async () => { if (!latest) return; setBusy("history"); try { setVersions(await api(`/api/documents/${latest.id}/versions`)); } finally { setBusy(false); } };
   const restore = async (version) => { setBusy(`restore-${version}`); try { await api(`/api/documents/${latest.id}/versions/${version}/restore`, { method: "POST" }); setVersions([]); setNote(`Version ${version} restored as a new current version.`); await load(); } finally { setBusy(false); } };
   const download = async (format) => { if (!latest) return setNote("Save an SRS before exporting."); setBusy(`export-${format}`); try { const blob = await api(`/api/documents/${latest.id}/export?format=${format}`); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `${project.name}-srs.${format}`; link.click(); URL.revokeObjectURL(link.href); setNote(`${format.toUpperCase()} download started.`); setExports(await api(`/api/projects/${id}/exports`)); } finally { setBusy(false); } };
   const removeProject = async () => { if (!window.confirm(`Delete "${project.name}" and all of its SRS history permanently?`)) return; setBusy("delete"); setDeleteProgress(8); const timer = window.setInterval(() => setDeleteProgress((value) => Math.min(value + Math.ceil((92 - value) / 5), 92)), 180); try { await api(`/api/projects/${id}`, { method: "DELETE" }); setDeleteProgress(100); await new Promise((resolve) => window.setTimeout(resolve, 450)); navigate("dashboard"); } catch (err) { setNote(err.message); } finally { window.clearInterval(timer); setBusy(false); setDeleteProgress(0); } };
-  return <Layout user={user} page="project" navigate={navigate} logout={logout}><section className="content"><div className="breadcrumb"><button onClick={() => navigate("dashboard")}>Projects</button> / <b>{project.name}</b></div><div className="welcome"><div><small>ACTIVE PROJECT</small><h1>{project.name}</h1><p>{project.client_idea}</p></div><div className="actions"><button className="outline" onClick={() => generate("questions")} disabled={Boolean(busy)}>✦ Ask AI</button><button className="primary-btn" onClick={() => generate("srs")} disabled={Boolean(busy)}>✦ Generate SRS</button><button className="outline" onClick={() => navigate("dashboard")} disabled={Boolean(busy)}>← Back</button><button className="delete-btn" onClick={removeProject} disabled={Boolean(busy)}>{busy === "delete" ? <InlineLoader>Deleting…</InlineLoader> : "Delete project"}</button></div></div>{note && <div className="message notice">{note}</div>}{busy === "srs" && <GenerateLoader label="Generating your simple SRS" detail="Turning your idea into a clear plan…" />}{busy === "questions" && <GenerateLoader label="Creating clarification questions" detail="Finding the details that matter most…" />}{busy === "delete" && <GenerateLoader label="Deleting your project" detail="Removing the project, SRS versions, and exports safely…" progress={deleteProgress} />}<div className="project-grid"><section className="panel padded"><div className="section-head"><div><h2>Clarification questions</h2><p>Answer these to improve the SRS.</p></div></div>{project.clarification_questions?.length ? project.clarification_questions.map((q, index) => <article className="question" key={q.id}><i>{index + 1}</i><div><b>{q.question}</b>{q.answer ? <p className="answer">{q.answer}</p> : <div className="answer-row"><input placeholder="Write the client answer…" value={answers[q.id] || ""} onChange={(event) => setAnswers({ ...answers, [q.id]: event.target.value })} /><button onClick={() => saveAnswer(q.id)} disabled={Boolean(busy)}>{busy === `answer-${q.id}` ? <InlineLoader>Saving…</InlineLoader> : "Save"}</button></div>}</div></article>) : <div className="empty">No clarification questions yet. Use Ask AI to generate them.</div>}</section><section className="panel padded"><div className="section-head"><div><h2>Current SRS {latest && <small>v{latest.version}</small>}</h2><p>Simple explanation for users, clear instructions for developers, plus time and cost estimates.</p></div><button className="outline" onClick={showVersions} disabled={!latest || Boolean(busy)}>{busy === "history" ? <InlineLoader>Loading…</InlineLoader> : "History"}</button></div><textarea className="srs-editor" rows="18" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Generate or write your SRS here…" /><div className="actions"><button className="primary-btn" onClick={save} disabled={Boolean(busy)}>{busy === "save" ? <InlineLoader>Saving…</InlineLoader> : "Save version"}</button><button className="outline" onClick={() => download("pdf")} disabled={!latest || Boolean(busy)}>{busy === "export-pdf" ? <InlineLoader>Exporting…</InlineLoader> : "Export PDF"}</button><button className="outline" onClick={() => download("docx")} disabled={!latest || Boolean(busy)}>{busy === "export-docx" ? <InlineLoader>Exporting…</InlineLoader> : "Export DOCX"}</button></div>{versions.length > 0 && <div className="version-list"><b>Version history</b>{versions.map((version) => <div key={version.id}><span>Version {version.version} · {date(version.created_at)}</span><button className="text-btn" onClick={() => restore(version.version)} disabled={Boolean(busy)}>{busy === `restore-${version.version}` ? <InlineLoader>Restoring…</InlineLoader> : "Restore"}</button></div>)}</div>}{exports.length > 0 && <div className="version-list"><b>Export history</b>{exports.map((item) => <div key={item.id}><span>{item.format.toUpperCase()} · {date(item.created_at)}</span><span>Downloaded</span></div>)}</div>}</section></div></section></Layout>;
+  return <Layout user={user} page="project" navigate={navigate} logout={logout}><section className="content"><div className="breadcrumb"><button onClick={() => navigate("dashboard")}>Projects</button> / <b>{project.name}</b></div><div className="welcome"><div><small>ACTIVE PROJECT</small><h1>{project.name}</h1><p>{project.client_idea}</p></div><div className="actions"><button className="outline" onClick={() => generate("questions")} disabled={Boolean(busy)}>✦ Ask AI</button><button className="primary-btn" onClick={() => generate("srs")} disabled={Boolean(busy)}>
+  {busy === "srs" ? `Generating SRS... ${srsProgress}%` : "✦ Generate SRS"}
+</button><button className="outline" onClick={() => navigate("dashboard")} disabled={Boolean(busy)}>← Back</button><button className="delete-btn" onClick={removeProject} disabled={Boolean(busy)}>{busy === "delete" ? <InlineLoader>Deleting…</InlineLoader> : "Delete project"}</button></div></div>{note && <div className="message notice">{note}</div>}{busy === "questions" && <GenerateLoader label="Creating clarification questions" detail="Finding the details that matter most…" />}{busy === "delete" && <GenerateLoader label="Deleting your project" detail="Removing the project, SRS versions, and exports safely…" progress={deleteProgress} />}<div className="project-grid"><section className="panel padded"><div className="section-head"><div><h2>Clarification questions</h2><p>Answer these to improve the SRS.</p></div></div>{project.clarification_questions?.length ? project.clarification_questions.map((q, index) => <article className="question" key={q.id}><i>{index + 1}</i><div><b>{q.question}</b>{q.answer ? <p className="answer">{q.answer}</p> : <div className="answer-row"><input placeholder="Write the client answer…" value={answers[q.id] || ""} onChange={(event) => setAnswers({ ...answers, [q.id]: event.target.value })} /><button onClick={() => saveAnswer(q.id)} disabled={Boolean(busy)}>{busy === `answer-${q.id}` ? <InlineLoader>Saving…</InlineLoader> : "Save"}</button></div>}</div></article>) : <div className="empty">No clarification questions yet. Use Ask AI to generate them.</div>}</section><section className="panel padded"><div className="section-head"><div><h2>Current SRS {latest && <small>v{latest.version}</small>}</h2><p>Simple explanation for users, clear instructions for developers, plus time and cost estimates.</p></div><button className="outline" onClick={showVersions} disabled={!latest || Boolean(busy)}>{busy === "history" ? <InlineLoader>Loading…</InlineLoader> : "History"}</button></div><textarea className="srs-editor" rows="18" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Generate or write your SRS here…" /><div className="actions"><button className="primary-btn" onClick={save} disabled={Boolean(busy)}>{busy === "save" ? <InlineLoader>Saving…</InlineLoader> : "Save version"}</button><button className="outline" onClick={() => download("pdf")} disabled={!latest || Boolean(busy)}>{busy === "export-pdf" ? <InlineLoader>Exporting…</InlineLoader> : "Export PDF"}</button><button className="outline" onClick={() => download("docx")} disabled={!latest || Boolean(busy)}>{busy === "export-docx" ? <InlineLoader>Exporting…</InlineLoader> : "Export DOCX"}</button></div>{versions.length > 0 && <div className="version-list"><b>Version history</b>{versions.map((version) => <div key={version.id}><span>Version {version.version} · {date(version.created_at)}</span><button className="text-btn" onClick={() => restore(version.version)} disabled={Boolean(busy)}>{busy === `restore-${version.version}` ? <InlineLoader>Restoring…</InlineLoader> : "Restore"}</button></div>)}</div>}{exports.length > 0 && <div className="version-list"><b>Export history</b>{exports.map((item) => <div key={item.id}><span>{item.format.toUpperCase()} · {date(item.created_at)}</span><span>Downloaded</span></div>)}</div>}</section></div></section></Layout>;
 }
 
 function Templates({ user, navigate, logout }) {
@@ -262,11 +390,123 @@ function Templates({ user, navigate, logout }) {
 }
 
 function Settings({ user, setUser, navigate, logout }) {
-  const [profile, setProfile] = useState({ name: user.name, email: user.email }); const [password, setPassword] = useState({ currentPassword: "", newPassword: "" }); const [note, setNote] = useState("");
-  const saveProfile = async (event) => { event.preventDefault(); try { const next = await api("/api/me", { method: "PATCH", body: JSON.stringify(profile) }); const updated = { ...user, ...next }; sessionStorage.setItem("srs-session", JSON.stringify(updated)); setUser(updated); setNote("Profile updated."); } catch (err) { setNote(err.message); } };
-  const changePassword = async (event) => { event.preventDefault(); try { await api("/api/me/password", { method: "POST", body: JSON.stringify(password) }); setPassword({ currentPassword: "", newPassword: "" }); setNote("Password changed."); } catch (err) { setNote(err.message); } };
-  const remove = async () => { if (window.confirm("Delete your account and all projects permanently?")) { await api("/api/me", { method: "DELETE" }); logout(); } };
-  return <Layout user={{ ...user, ...profile }} page="settings" navigate={navigate} logout={logout}><section className="content settings"><div className="welcome"><div><small>ACCOUNT</small><h1>Settings</h1><p>Manage your profile and workspace access.</p></div></div>{note && <div className="message notice">{note}</div>}<div className="settings-grid"><section className="panel padded"><h2>Profile</h2><form onSubmit={saveProfile}><label>Name<input required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></label><label>Email<input required type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} /></label><button className="primary-btn full">Save profile</button></form></section><section className="panel padded"><h2>Change password</h2><form onSubmit={changePassword}><label>Current password<input required type="password" value={password.currentPassword} onChange={(e) => setPassword({ ...password, currentPassword: e.target.value })} /></label><label>New password<input required minLength="8" type="password" value={password.newPassword} onChange={(e) => setPassword({ ...password, newPassword: e.target.value })} /></label><button className="primary-btn full">Change password</button></form></section><section className="panel padded danger-panel"><h2>Danger zone</h2><p className="muted">Permanently delete your account, projects, and exports.</p><button className="delete-btn" onClick={remove}>Delete account</button></section></div></section></Layout>;
+  const [profile, setProfile] = useState({
+  name: user.name,
+  email: user.email
+});
+const changePassword = async (event) => {
+  event.preventDefault();
+
+  try {
+    await api("/api/me/password", {
+      method: "PATCH",
+      body: JSON.stringify(password)
+    });
+
+    setPassword({
+      currentPassword: "",
+      newPassword: ""
+    });
+
+    setNote("Password changed successfully.");
+  } catch (err) {
+    setNote(err.message);
+  }
+};
+const [profilePhoto, setProfilePhoto] = useState(
+  user.profile_image || user.profilePhoto || ""
+); const [password, setPassword] = useState({ currentPassword: "", newPassword: "" }); const [note, setNote] = useState("");
+{
+}; 
+const saveProfile = async (event) => {
+  event.preventDefault();
+
+  try {
+    const next = await api("/api/me", {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...profile,
+        profile_image: profilePhoto
+      })
+    });
+
+    const updated = {
+      ...user,
+      ...next,
+      profilePhoto: next.profile_image || profilePhoto
+    };
+
+    sessionStorage.setItem("srs-session", JSON.stringify(updated));
+    setUser(updated);
+    setNote("Profile updated.");
+  } catch (err) {
+    setNote(err.message);
+  }
+};  const remove = async () => { if (window.confirm("Delete your account and all projects permanently?")) { await api("/api/me", { method: "DELETE" }); logout(); } };
+  return <Layout user={{ ...user, ...profile }} page="settings" navigate={navigate} logout={logout}><section className="content settings"><div className="welcome"><div><small>ACCOUNT</small><h1>Settings</h1><p>Manage your profile and workspace access.</p></div></div>{note && <div className="message notice">{note}</div>}<div className="settings-grid"><section className="panel padded">
+  <h2>Profile</h2>
+
+  <div className="profile-photo-section">
+    <div className="profile-photo">
+      {profilePhoto ? (
+        <img src={profilePhoto} alt="Profile" />
+      ) : (
+        <span>{profile.name?.charAt(0).toUpperCase()}</span>
+      )}
+    </div>
+
+    <div>
+     <label className="photo-btn">
+    <svg
+  className="photo-camera-icon"
+  viewBox="0 0 24 24"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  <path
+    d="M4 7h3l1.5-2h7L17 7h3v11H4V7Z"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinejoin="round"
+  />
+  <circle
+    cx="12"
+    cy="12.5"
+    r="3"
+    stroke="currentColor"
+    strokeWidth="2"
+  />
+</svg>
+    Change photo
+        <input
+          type="file"
+          accept="image/png,image/jpeg"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+              setNote("Profile picture must be smaller than 2MB.");
+              return;
+            }
+
+const reader = new FileReader();
+
+reader.onload = () => {
+  setProfilePhoto(reader.result);
+};
+
+reader.readAsDataURL(file);          }}
+        />
+      </label>
+
+      <small>JPG or PNG · Max 2MB</small>
+    </div>
+  </div>
+  <form onSubmit={saveProfile}><label>Name<input required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></label><label>Email<input required type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} /></label><button className="primary-btn full">Save profile</button></form></section><section className="panel padded"><h2>Change password</h2><form onSubmit={changePassword}><label>Current password<input required type="password" value={password.currentPassword} onChange={(e) => setPassword({ ...password, currentPassword: e.target.value })} /></label><label>New password<input required minLength="8" type="password" value={password.newPassword} onChange={(e) => setPassword({ ...password, newPassword: e.target.value })} /></label><button className="primary-btn full">Change password</button></form></section><section className="panel padded danger-panel"><h2>Danger zone</h2><p className="muted">Permanently delete your account, projects, and exports.</p><button className="delete-btn" onClick={remove}>Delete account</button></section></div></section></Layout>;
 }
 
 function Modal({ title, onClose, children }) { return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={(event) => event.stopPropagation()}><div className="section-head"><h2>{title}</h2><button className="icon-btn" onClick={onClose}>×</button></div>{children}</div></div>; }
