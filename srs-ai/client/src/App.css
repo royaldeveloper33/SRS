@@ -216,3 +216,241 @@
   object-fit: cover;
   display: block;
 }
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.theme-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 82px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e4ebe7;
+  border-radius: 10px;
+  color: #26332e;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.theme-option:hover {
+  border-color: #19a974;
+  background: #eaf9f2;
+}
+
+.theme-option.selected {
+  border: 2px solid #19a974;
+  background: #eaf9f2;
+}
+
+.theme-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #eaf9f2;
+  color: #19a974;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.theme-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.theme-option-text strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.theme-option-text span {
+  font-size: 12px;
+  color: #718096;
+}
+
+.theme-check {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  color: #19a974;
+  font-size: 16px;
+}
+/* SRS AI Dark Theme */
+.app.dark {
+  background: #111816;
+  color: #f1f5f3;
+}
+
+.app.dark .main {
+  background: #111816;
+}
+
+.app.dark .topbar {
+  background: #151d1a;
+  border-color: #2b3934;
+}
+
+.app.dark .sidebar {
+  background: #151d1a;
+  border-color: #2b3934;
+}
+
+.app.dark .content {
+  background: #111816;
+}
+
+.app.dark .welcome h1,
+.app.dark h1,
+.app.dark h2,
+.app.dark h3,
+.app.dark strong,
+.app.dark label {
+  color: #f1f5f3;
+}
+
+.app.dark .welcome p,
+.app.dark .section-head p,
+.app.dark small,
+.app.dark .theme-option-text span {
+  color: #9aa9a3;
+}
+
+.app.dark .panel {
+  background: #1b2521;
+  border-color: #2b3934;
+}
+
+.app.dark input,
+.app.dark textarea,
+.app.dark select {
+  background: #151d1a;
+  color: #f1f5f3;
+  border-color: #34443e;
+}
+
+.app.dark input::placeholder,
+.app.dark textarea::placeholder {
+  color: #718078;
+}
+
+.app.dark .theme-option {
+  background: #151d1a;
+  color: #f1f5f3;
+  border-color: #34443e;
+}
+
+.app.dark .theme-option:hover {
+  background: #1d2b25;
+  border-color: #19a974;
+}
+
+.app.dark .theme-option.selected {
+  background: #19352a;
+  border-color: #19a974;
+}
+
+.app.dark .theme-icon {
+  background: #19352a;
+  color: #19a974;
+}
+.app.dark .profile-photo-section .photo-btn {
+  background: #151d1a;
+  color: #19a974;
+  border-color: #34443e;
+}
+
+.app.dark .profile-photo-section .photo-btn:hover {
+  background: #19352a;
+  border-color: #19a974;
+}
+
+.app.dark .delete-btn {
+  background: #151d1a;
+  color: #ff6b6b;
+  border-color: #7a3939;
+}
+
+.app.dark .delete-btn:hover {
+  background: #321c1c;
+}
+/* Dashboard dark mode */
+.app.dark .project-row {
+  background: #1b2521;
+  border-top-color: #2b3934;
+  color: #9aa9a3;
+}
+
+.app.dark .project-row.header {
+  background: #151d1a;
+  color: #718078;
+}
+
+.app.dark .project-link b {
+  color: #f1f5f3;
+}
+
+.app.dark .row-delete {
+  color: #718078;
+}
+
+.app.dark .row-delete:hover {
+  color: var(--danger);
+  background: #321c1c;
+}
+
+.app.dark .topbar {
+  background: #151d1a;
+}
+
+.app.dark .toolbar input,
+.app.dark .toolbar select {
+  background: #151d1a;
+  color: #f1f5f3;
+  border-color: #34443e;
+}
+
+.app.dark .sidebar nav .active,
+.app.dark .sidebar nav button:hover {
+  background: #19352a;
+  color: #f1f5f3;
+}
+/* Dark mode outline buttons */
+.app.dark .outline {
+  background: #151d1a;
+  color: #f1f5f3;
+  border-color: #34443e;
+}
+
+.app.dark .outline:hover {
+  background: #19352a;
+  border-color: #19a974;
+  color: #ffffff;
+}
+.app.dark button:not(.primary-btn):not(.delete-btn):not(.theme-option) {
+  color: #f1f5f3;
+}
+/* Project loading screen - Dark Theme */
+.app.dark .generate-loader {
+  background: #1b2521;
+  border-color: #34443e;
+  color: #9aa9a3;
+}
+
+.app.dark .generate-loader b {
+  color: #f1f5f3;
+}
+
+.app.dark .loader-orbit,
+.app.dark .inline-loader i {
+  border-color: #49665a;
+  border-top-color: #19a974;
+}

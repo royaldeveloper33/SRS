@@ -237,7 +237,7 @@ function Sidebar({ user, page, navigate, logout }) {
 
 function MobileNav({ page, navigate }) { return <nav className="mobile-nav" aria-label="Main navigation"><button className={page === "dashboard" || page === "project" ? "active" : ""} onClick={() => navigate("dashboard")}><i>▦</i><span>Projects</span></button><button className={page === "templates" ? "active" : ""} onClick={() => navigate("templates")}><i>▱</i><span>Templates</span></button><button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}><i>⚙</i><span>Settings</span></button></nav>; }
 
-function Layout({ user, page, navigate, logout, children }) { return <div className="app"><Sidebar {...{ user, page, navigate, logout }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span></header>{children}</main><MobileNav {...{ page, navigate }} /></div>; }
+function Layout({ user, page, navigate, logout, children }) { return <div className={`app ${localStorage.getItem("srs-theme") || "light"}`}><Sidebar {...{ user, page, navigate, logout }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span></header>{children}</main><MobileNav {...{ page, navigate }} /></div>; }
 
 function Dashboard({ user, navigate, openProject, logout }) {const [loading, setLoading] = useState(true);
 const [projectProgress, setProjectProgress] = useState(0);
@@ -394,6 +394,14 @@ function Settings({ user, setUser, navigate, logout }) {
   name: user.name,
   email: user.email
 });
+const [theme, setTheme] = useState(
+  localStorage.getItem("srs-theme") || "light"
+);
+const changeTheme = (nextTheme) => {
+  setTheme(nextTheme);
+  localStorage.setItem("srs-theme", nextTheme);
+  document.documentElement.setAttribute("data-theme", nextTheme);
+};
 const changePassword = async (event) => {
   event.preventDefault();
 
@@ -443,7 +451,50 @@ const saveProfile = async (event) => {
     setNote(err.message);
   }
 };  const remove = async () => { if (window.confirm("Delete your account and all projects permanently?")) { await api("/api/me", { method: "DELETE" }); logout(); } };
-  return <Layout user={{ ...user, ...profile }} page="settings" navigate={navigate} logout={logout}><section className="content settings"><div className="welcome"><div><small>ACCOUNT</small><h1>Settings</h1><p>Manage your profile and workspace access.</p></div></div>{note && <div className="message notice">{note}</div>}<div className="settings-grid"><section className="panel padded">
+  return <Layout user={{ ...user, ...profile }} page="settings" navigate={navigate} logout={logout}><section className="content settings"><div className="welcome"><div><small>ACCOUNT</small><h1>Settings</h1><p>Manage your profile and workspace access.</p></div></div>{note && <div className="message notice">{note}</div>}<div className="settings-grid">
+
+  <section className="panel padded">
+  <div className="section-head">
+    <div>
+      <h2>Appearance</h2>
+      <p>Choose how SRS AI looks on your device.</p>
+    </div>
+  </div>
+
+  <div className="theme-options">
+    <button
+      type="button"
+      className={`theme-option ${theme === "light" ? "selected" : ""}`}
+      onClick={() => changeTheme("light")}
+    >
+      <div className="theme-icon">☀</div>
+
+      <div className="theme-option-text">
+        <strong>Light</strong>
+        <span>Clean & bright</span>
+      </div>
+
+      {theme === "light" && <b className="theme-check">✓</b>}
+    </button>
+
+    <button
+      type="button"
+      className={`theme-option ${theme === "dark" ? "selected" : ""}`}
+      onClick={() => changeTheme("dark")}
+    >
+      <div className="theme-icon">◐</div>
+
+      <div className="theme-option-text">
+        <strong>Dark</strong>
+        <span>Easy on the eyes</span>
+      </div>
+
+      {theme === "dark" && <b className="theme-check">✓</b>}
+    </button>
+  </div>
+</section>
+
+  <section className="panel padded">
   <h2>Profile</h2>
 
   <div className="profile-photo-section">
