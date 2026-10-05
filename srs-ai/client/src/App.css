@@ -94,6 +94,7 @@
   border-radius: 10px;
   transition: width 0.2s ease;
 }
+<<<<<<< HEAD
 /* Profile photo */
 .profile-photo-section {
   display: flex;
@@ -454,3 +455,166 @@
   border-color: #49665a;
   border-top-color: #19a974;
 }
+=======
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 4;
+  width: 72px;
+  height: 100vh;
+  min-height: 100vh;
+  padding: 25px 8px 16px;
+  overflow: hidden;
+  transition: width 0.24s cubic-bezier(0.2, 0.75, 0.25, 1), box-shadow 0.24s ease;
+}
+
+.sidebar .brand {
+  justify-content: center;
+  padding: 0 0 31px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar .brand span:not(.brand-mark) {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.24s ease, opacity 0.16s ease;
+  white-space: nowrap;
+}
+
+.sidebar > small {
+  display: block;
+  max-height: 0;
+  overflow: hidden;
+  padding: 0 12px;
+  opacity: 0;
+  transition: max-height 0.2s ease, padding 0.2s ease, opacity 0.16s ease;
+}
+
+.sidebar nav {
+  width: 100%;
+}
+
+.sidebar nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar nav span {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.24s ease, opacity 0.16s ease;
+  white-space: nowrap;
+}
+
+.sidebar .profile {
+  justify-content: center;
+  gap: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar .profile > div {
+  display: block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.24s ease, opacity 0.16s ease;
+}
+
+.sidebar .profile button {
+  max-width: 0;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.24s ease, opacity 0.16s ease;
+}
+
+.sidebar:hover,
+.sidebar:focus-within {
+  width: 250px;
+  padding: 25px 14px 16px;
+  box-shadow: 8px 0 24px rgb(25 35 41 / 10%);
+}
+
+.sidebar:hover .brand,
+.sidebar:focus-within .brand {
+  justify-content: flex-start;
+  padding: 0 11px 31px;
+}
+
+.sidebar:hover .brand span:not(.brand-mark),
+.sidebar:focus-within .brand span:not(.brand-mark) {
+  max-width: 100px;
+  opacity: 1;
+}
+
+.sidebar:hover > small,
+.sidebar:focus-within > small {
+  max-height: 20px;
+  padding: 0 12px 10px;
+  opacity: 1;
+}
+
+.sidebar:hover nav button,
+.sidebar:focus-within nav button {
+  justify-content: flex-start;
+  padding: 0 12px;
+}
+
+.sidebar:hover nav span,
+.sidebar:focus-within nav span {
+  max-width: 140px;
+  opacity: 1;
+}
+
+.sidebar:hover .profile,
+.sidebar:focus-within .profile {
+  gap: 9px;
+}
+
+.sidebar:hover .profile > div,
+.sidebar:focus-within .profile > div {
+  max-width: 150px;
+  opacity: 1;
+}
+
+.sidebar:hover .profile button,
+.sidebar:focus-within .profile button {
+  max-width: 32px;
+  padding: 0 6px;
+  opacity: 1;
+}
+
+.main {
+  margin-left: 72px;
+}
+
+@media (max-width: 700px) {
+  .main {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar .brand span:not(.brand-mark),
+  .sidebar > small,
+  .sidebar nav span,
+  .sidebar .profile > div,
+  .sidebar .profile button {
+    transition: none;
+  }
+}
+>>>>>>> ee3157444e54d936e159d938726d25521388c92e
