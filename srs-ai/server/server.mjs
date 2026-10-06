@@ -54,6 +54,7 @@ const publicUser = (user) => ({
   name: user.name,
   email: user.email,
   created_at: user.created_at,
+  last_login_at: user.last_login_at,
   profile_image: user.profile_image || ""
 });const authResponse = (user) => ({ user: publicUser(user), token: signToken({ sub: user.id, email: user.email }) });
 const parseId = (value) => Number.isInteger(Number(value)) && Number(value) > 0 ? Number(value) : null;
@@ -134,7 +135,7 @@ app.post("/api/auth/register", handle(async (request, response) => {
 app.post("/api/auth/verify-email", handle(async (request, response) => {
   const email = typeof request.body.email === "string" ? request.body.email.trim().toLowerCase() : ""; const code = String(request.body.code || ""); const user = await prisma.users.findUnique({ where: { email } });
   if (!user || user.email_verified || !user.email_otp_expires_at || user.email_otp_expires_at < new Date() || crypto.createHash("sha256").update(code).digest("hex") !== user.email_otp_hash) return response.status(400).json({ error: "Invalid or expired verification code" });
-  const verified = await prisma.users.update({ where: { id: user.id }, data: { email_verified: true, email_otp_hash: null, email_otp_expires_at: null } }); return response.json(authResponse(verified));
+  const verified = await prisma.users.update({ where: { id: user.id }, data: { email_verified: true, email_otp_hash: null, email_otp_expires_at: null, last_login_at: new Date() } }); return response.json(authResponse(verified));
 }));
 app.post("/api/auth/login", handle(async (request, response) => {
   const email = typeof request.body.email === "string" ? request.body.email.trim().toLowerCase() : "";
@@ -142,7 +143,7 @@ app.post("/api/auth/login", handle(async (request, response) => {
 if (!email || typeof password !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error: "A valid email and password are required" });  const user = await prisma.users.findUnique({ where: { email } });
   if (!user || typeof password !== "string" || !(await bcrypt.compare(password, user.password_hash))) return response.status(401).json({ error: "Incorrect email or password" });
   if (!user.email_verified) return response.status(403).json({ error: "Verify your email before signing in" });
-  return response.json(authResponse(user));
+  return response.json(authResponse(await prisma.users.update({ where: { id: user.id }, data: { last_login_at: new Date() } })));
 }));
 app.post("/api/auth/google", handle(async (request, response) => {
   const { credential } = request.body;
@@ -185,7 +186,8 @@ app.post("/api/auth/google", handle(async (request, response) => {
       where: { id: user.id },
       data: {
         google_id: googleId,
-        email_verified: true
+        email_verified: true,
+        last_login_at: new Date()
       }
     });
   } else {
@@ -197,7 +199,8 @@ app.post("/api/auth/google", handle(async (request, response) => {
         email,
         password_hash: await bcrypt.hash(randomPassword, 12),
         google_id: googleId,
-        email_verified: true
+        email_verified: true,
+        last_login_at: new Date()
       }
     });
   }
@@ -208,6 +211,14 @@ app.get("/api/health", (_request, response) => response.json({ message: "SRS AI 
 
 app.use("/api", requireAuth);
 app.get("/api/me", handle(async (request, response) => response.json(publicUser(await prisma.users.findUniqueOrThrow({ where: { id: request.user.id } })))));
+app.get("/api/dashboard/stats", handle(async (request, response) => {
+  const [statuses, exported] = await Promise.all([
+    prisma.projects.groupBy({ by: ["status"], where: { user_id: request.user.id }, _count: { _all: true } }),
+    prisma.document_exports.count({ where: { projects: { user_id: request.user.id } } })
+  ]);
+  const count = (status) => statuses.find((item) => item.status === status)?._count._all || 0;
+  response.json({ total: statuses.reduce((sum, item) => sum + item._count._all, 0), draft: count("draft"), completed: count("complete"), exported });
+}));
 app.get("/api/usage", (_request, response) => {
   const limit = Number(process.env.GEMINI_TOKEN_LIMIT || 1000000);
   return response.json({ used: geminiTokensUsed, limit, remaining: Math.max(0, limit - geminiTokensUsed), model: process.env.GEMINI_MODEL || "gemini-3.6-flash" });
@@ -271,7 +282,7 @@ app.post("/api/projects", handle(async (request, response) => {
 app.get("/api/projects/:projectId", handle(async (request, response) => {
   const projectId = parseId(request.params.projectId);
   if (!projectId) return response.status(400).json({ error: "Invalid project id" });
-  const project = await prisma.projects.findFirst({ where: { id: projectId, user_id: request.user.id }, select: { ...projectSelect, clarification_questions: { select: { id: true, question: true, answer: true, created_at: true }, orderBy: { created_at: "asc" } }, srs_documents: { select: { id: true, title: true, content: true, version: true, created_at: true, updated_at: true }, orderBy: { version: "desc" } } } });
+  const project = await prisma.projects.findFirst({ where: { id: projectId, user_id: request.user.id }, select: { ...projectSelect, clarification_questions: { select: { id: true, question: true, answer: true, answer_type: true, choices: true, selected_choices: true, created_at: true }, orderBy: { created_at: "asc" } }, srs_documents: { select: { id: true, title: true, content: true, version: true, created_at: true, updated_at: true }, orderBy: { version: "desc" } } } });
   return project ? response.json(project) : response.status(404).json({ error: "Project not found" });
 }));
 app.patch("/api/projects/:projectId", handle(async (request, response) => {
@@ -302,9 +313,9 @@ app.get("/api/templates", (_request, response) => response.json([
 ]));
 
 const assertProject = async (request, response, projectId) => { if (!projectId || !(await ownedProject(request.user.id, projectId))) { response.status(404).json({ error: "Project not found" }); return false; } return true; };
-app.get("/api/projects/:projectId/questions", handle(async (request, response) => { const id = parseId(request.params.projectId); if (!(await assertProject(request, response, id))) return; response.json(await prisma.clarification_questions.findMany({ where: { project_id: id }, orderBy: { created_at: "asc" }, select: { id: true, project_id: true, question: true, answer: true, created_at: true } })); }));
-app.post("/api/projects/:projectId/questions", handle(async (request, response) => { const id = parseId(request.params.projectId); if (!(await assertProject(request, response, id))) return; if (typeof request.body.question !== "string" || !request.body.question.trim()) return response.status(400).json({ error: "question is required" }); response.status(201).json(await prisma.clarification_questions.create({ data: { project_id: id, question: request.body.question.trim() } })); }));
-app.patch("/api/questions/:questionId", handle(async (request, response) => { const questionId = parseId(request.params.questionId); const question = questionId && await prisma.clarification_questions.findUnique({ where: { id: questionId } }); if (!question || !(await ownedProject(request.user.id, question.project_id))) return response.status(404).json({ error: "Clarification question not found" }); if (typeof request.body.answer !== "string" || !request.body.answer.trim()) return response.status(400).json({ error: "answer is required" }); response.json(await prisma.clarification_questions.update({ where: { id: questionId }, data: { answer: request.body.answer.trim() } })); }));
+app.get("/api/projects/:projectId/questions", handle(async (request, response) => { const id = parseId(request.params.projectId); if (!(await assertProject(request, response, id))) return; response.json(await prisma.clarification_questions.findMany({ where: { project_id: id }, orderBy: { created_at: "asc" }, select: { id: true, project_id: true, question: true, answer: true, answer_type: true, choices: true, selected_choices: true, created_at: true } })); }));
+app.post("/api/projects/:projectId/questions", handle(async (request, response) => { const id = parseId(request.params.projectId); if (!(await assertProject(request, response, id))) return; const { question, answer_type, choices } = request.body; if (typeof question !== "string" || !question.trim()) return response.status(400).json({ error: "question is required" }); const type = ["text", "yes_no", "multiple_choice"].includes(answer_type) ? answer_type : "text"; const cleanChoices = Array.isArray(choices) ? choices.filter((choice) => typeof choice === "string").map((choice) => choice.trim()).filter(Boolean).slice(0, 8) : []; response.status(201).json(await prisma.clarification_questions.create({ data: { project_id: id, question: question.trim(), answer_type: type, choices: cleanChoices.length ? cleanChoices : undefined } })); }));
+app.patch("/api/questions/:questionId", handle(async (request, response) => { const questionId = parseId(request.params.questionId); const question = questionId && await prisma.clarification_questions.findUnique({ where: { id: questionId } }); if (!question || !(await ownedProject(request.user.id, question.project_id))) return response.status(404).json({ error: "Clarification question not found" }); const selected = Array.isArray(request.body.selected_choices) ? request.body.selected_choices.filter((choice) => typeof choice === "string").map((choice) => choice.trim()).filter(Boolean).slice(0, 8) : []; const answer = typeof request.body.answer === "string" ? request.body.answer.trim() : selected.join(", "); if (!answer) return response.status(400).json({ error: "answer is required" }); response.json(await prisma.clarification_questions.update({ where: { id: questionId }, data: { answer, selected_choices: selected.length ? selected : undefined } })); }));
 
 app.post("/api/projects/:projectId/ai/questions", handle(async (request, response) => {
   const id = parseId(request.params.projectId); if (!(await assertProject(request, response, id))) return;
