@@ -97,6 +97,7 @@ model users {
   password_hash        String
     google_id            String?            @unique @db.VarChar(255)
   created_at           DateTime?          @default(now()) @db.Timestamp(6)
+  last_login_at        DateTime?          @db.Timestamp(6)
   api_key_hash         String?
   api_key_created_at   DateTime?          @db.Timestamp(6)
   email_verified       Boolean            @default(false)
