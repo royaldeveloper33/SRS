@@ -215,6 +215,7 @@ app.get("/api/usage", (_request, response) => {
 app.patch("/api/me", handle(async (request, response) => {
 const { name, email, profile_image } = request.body;
   if (typeof name !== "string" || name.trim().length < 2 || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return response.status(400).json({ error: "A valid name and email are required" });
+  if (typeof profile_image === "string" && profile_image && (!/^data:image\/(png|jpeg|webp);base64,/i.test(profile_image) || profile_image.length > 750000)) return response.status(400).json({ error: "Profile image must be an optimized PNG, JPG, or WebP smaller than 750 KB" });
   const normalizedEmail = email.trim().toLowerCase();
   const existing = await prisma.users.findFirst({ where: { email: normalizedEmail, NOT: { id: request.user.id } }, select: { id: true } });
   if (existing) return response.status(409).json({ error: "That email is already in use" });

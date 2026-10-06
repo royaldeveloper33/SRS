@@ -14,6 +14,28 @@ const api = async (path, options = {}) => {
 };
 const initials = (name = "") => name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "U";
 const date = (value) => value ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+const compressProfileImage = (file) => new Promise((resolve, reject) => {
+  if (!file?.type?.match(/^image\/(png|jpe?g|webp)$/)) return reject(new Error("Choose a PNG, JPG, or WebP image."));
+  if (file.size > 8 * 1024 * 1024) return reject(new Error("Choose an image smaller than 8 MB."));
+  const image = new Image();
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error("Unable to read that image."));
+  reader.onload = () => { image.src = String(reader.result); };
+  image.onerror = () => reject(new Error("That image file is not supported."));
+  image.onload = () => {
+    const size = Math.min(480, image.naturalWidth, image.naturalHeight);
+    const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+    const sourceX = Math.max(0, (image.naturalWidth - sourceSize) / 2);
+    const sourceY = Math.max(0, (image.naturalHeight - sourceSize) / 2);
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d");
+    context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
+    resolve(canvas.toDataURL("image/jpeg", 0.84));
+  };
+  reader.readAsDataURL(file);
+});
 const Brand = () => <div className="brand"><span className="brand-mark">S</span><span>SRS <i>AI</i></span></div>;
 const GenerateLoader = ({ label = "Preparing your workspace", detail = "Putting everything together for you…", progress }) => <div className="generate-loader" role="status" aria-live="polite"><div className="loader-orbit"><i /><i /><i /></div><div className="loader-copy"><b>{label}</b><span>{detail}</span>{typeof progress === "number" && <div className="progress-track"><i style={{ width: `${progress}%` }} /></div>}</div>{typeof progress === "number" ? <strong className="progress-value">{progress}%</strong> : <em className="loader-dots">•••</em>}</div>;
 const InlineLoader = ({ children = "Working…" }) => <span className="inline-loader" role="status"><i />{children}</span>;
@@ -389,7 +411,7 @@ function Templates({ user, navigate, logout }) {
   return <Layout user={user} page="templates" navigate={navigate} logout={logout}><section className="content"><div className="welcome"><div><small>START FASTER</small><h1>Templates</h1><p>Use a proven structure, then make it yours.</p></div></div>{error && <div className="message error">{error}</div>}<div className="template-grid">{templates.map((template) => <article className="panel padded template-card" key={template.id}><i>✦</i><h2>{template.name}</h2><p>{template.description}</p><button className="primary-btn" onClick={() => createFromTemplate(template)}>Use template →</button></article>)}</div></section></Layout>;
 }
 
-function Settings({ user, setUser, navigate, logout }) {
+/*function Settings({ user, setUser, navigate, logout }) {
   const [profile, setProfile] = useState({
   name: user.name,
   email: user.email
@@ -558,6 +580,51 @@ reader.readAsDataURL(file);          }}
     </div>
   </div>
   <form onSubmit={saveProfile}><label>Name<input required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></label><label>Email<input required type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} /></label><button className="primary-btn full">Save profile</button></form></section><section className="panel padded"><h2>Change password</h2><form onSubmit={changePassword}><label>Current password<input required type="password" value={password.currentPassword} onChange={(e) => setPassword({ ...password, currentPassword: e.target.value })} /></label><label>New password<input required minLength="8" type="password" value={password.newPassword} onChange={(e) => setPassword({ ...password, newPassword: e.target.value })} /></label><button className="primary-btn full">Change password</button></form></section><section className="panel padded danger-panel"><h2>Danger zone</h2><p className="muted">Permanently delete your account, projects, and exports.</p><button className="delete-btn" onClick={remove}>Delete account</button></section></div></section></Layout>;
+}*/
+
+function Settings({ user, setUser, navigate, logout }) {
+  const [profile, setProfile] = useState({ name: user.name, email: user.email });
+  const [profilePhoto, setProfilePhoto] = useState(user.profile_image || "");
+  const [password, setPassword] = useState({ currentPassword: "", newPassword: "" });
+  const [theme, setTheme] = useState(localStorage.getItem("srs-theme") || "light");
+  const [note, setNote] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const changeTheme = (nextTheme) => {
+    setTheme(nextTheme);
+    localStorage.setItem("srs-theme", nextTheme);
+  };
+  const choosePhoto = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try { setProfilePhoto(await compressProfileImage(file)); setNote("Photo ready. Save profile to keep it."); }
+    catch (error) { setNote(error.message); }
+    finally { event.target.value = ""; }
+  };
+  const saveProfile = async (event) => {
+    event.preventDefault(); setSavingProfile(true); setNote("");
+    try {
+      const next = await api("/api/me", { method: "PATCH", body: JSON.stringify({ ...profile, profile_image: profilePhoto }) });
+      const updated = { ...user, ...next };
+      sessionStorage.setItem("srs-session", JSON.stringify(updated));
+      setUser(updated); setProfile({ name: updated.name, email: updated.email }); setProfilePhoto(updated.profile_image || "");
+      setNote("Profile saved successfully.");
+    } catch (error) { setNote(error.message); }
+    finally { setSavingProfile(false); }
+  };
+  const changePassword = async (event) => {
+    event.preventDefault(); setNote("");
+    try { await api("/api/me/password", { method: "POST", body: JSON.stringify(password) }); setPassword({ currentPassword: "", newPassword: "" }); setNote("Password changed successfully."); }
+    catch (error) { setNote(error.message); }
+  };
+  const remove = async () => { if (window.confirm("Delete your account and all projects permanently?")) { await api("/api/me", { method: "DELETE" }); logout(); } };
+  const layoutUser = { ...user, ...profile, profile_image: profilePhoto };
+  return <Layout user={layoutUser} page="settings" navigate={navigate} logout={logout}><section className="content settings"><div className="welcome"><div><small>ACCOUNT</small><h1>Settings</h1><p>Manage your profile, workspace access, and appearance.</p></div></div>{note && <div className="message notice" role="status">{note}</div>}<div className="settings-grid">
+    <section className="panel padded settings-card profile-settings"><div className="section-head"><div><h2>Profile</h2><p>Your public workspace identity.</p></div></div><div className="profile-photo-section"><div className="profile-photo">{profilePhoto ? <img src={profilePhoto} alt="Profile preview" /> : <span>{initials(profile.name)}</span>}</div><div className="photo-actions"><label className="photo-btn">◉ Change photo<input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={choosePhoto} /></label>{profilePhoto && <button type="button" className="text-btn remove-photo" onClick={() => { setProfilePhoto(""); setNote("Photo removed. Save profile to confirm."); }}>Remove</button>}<small>PNG, JPG, or WebP · automatically optimized</small></div></div><form onSubmit={saveProfile}><label>Name<input required maxLength="100" value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></label><label>Email<input required type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} /></label><button className="primary-btn full" disabled={savingProfile}>{savingProfile ? <InlineLoader>Saving…</InlineLoader> : "Save profile"}</button></form></section>
+    <section className="panel padded settings-card"><div className="section-head"><div><h2>Appearance</h2><p>Choose the workspace mood you prefer.</p></div></div><div className="theme-options"><button type="button" className={`theme-option ${theme === "light" ? "selected" : ""}`} onClick={() => changeTheme("light")}><i>☀</i><span><b>Light</b><small>Clear and focused</small></span>{theme === "light" && <strong>✓</strong>}</button><button type="button" className={`theme-option ${theme === "dark" ? "selected" : ""}`} onClick={() => changeTheme("dark")}><i>◐</i><span><b>Dark</b><small>Easy on the eyes</small></span>{theme === "dark" && <strong>✓</strong>}</button></div></section>
+    <section className="panel padded settings-card"><h2>Change password</h2><p>Use a strong password that you do not reuse elsewhere.</p><form onSubmit={changePassword}><label>Current password<input required type="password" value={password.currentPassword} onChange={(e) => setPassword({ ...password, currentPassword: e.target.value })} /></label><label>New password<input required minLength="8" type="password" value={password.newPassword} onChange={(e) => setPassword({ ...password, newPassword: e.target.value })} /></label><button className="primary-btn full">Change password</button></form></section>
+    <section className="panel padded danger-panel settings-card"><h2>Danger zone</h2><p>Permanently delete your account, projects, and exports.</p><button className="delete-btn" onClick={remove}>Delete account</button></section>
+  </div></section></Layout>;
 }
 
 function Modal({ title, onClose, children }) { return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={(event) => event.stopPropagation()}><div className="section-head"><h2>{title}</h2><button className="icon-btn" onClick={onClose}>×</button></div>{children}</div></div>; }
