@@ -94,7 +94,6 @@
   border-radius: 10px;
   transition: width 0.2s ease;
 }
-<<<<<<< HEAD
 /* Profile photo */
 .profile-photo-section {
   display: flex;
@@ -455,7 +454,6 @@
   border-color: #49665a;
   border-top-color: #19a974;
 }
-=======
 
 .sidebar {
   position: fixed;
@@ -617,4 +615,3 @@
     transition: none;
   }
 }
->>>>>>> ee3157444e54d936e159d938726d25521388c92e
