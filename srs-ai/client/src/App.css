@@ -598,9 +598,271 @@
   margin-left: 72px;
 }
 
+:root {
+  --ink: #17324d;
+  --muted: #17324d;
+  --line: #dce8ef;
+  --paper: #f0f7fc;
+  --side: #102c3d;
+  --accent: #08cfc5;
+  --dark: #17324d;
+  --soft: #e0f9f7;
+  --logo: #19c5c5;
+}
+
+.brand-mark {
+  background: var(--logo);
+}
+
+.brand i {
+  color: var(--logo);
+}
+
+.brand-panel {
+  background: #102c3d;
+  border-color: #294657;
+  color: #f3f8fc;
+}
+
+.brand-panel .brand-content small,
+.brand-panel .brand-content em {
+  color: #19c5c5;
+}
+
+.brand-panel .brand-content p,
+.brand-panel footer {
+  color: #b5c8d8;
+}
+
+.form-panel {
+  background: var(--paper);
+}
+
+.sidebar {
+  background: var(--side);
+  border-color: #294657;
+  color: #f3f8fc;
+}
+
+.sidebar .brand {
+  color: #f3f8fc;
+}
+
+.sidebar > small {
+  color: #91a8bc;
+}
+
+.sidebar nav button {
+  color: #c0d0df;
+}
+
+.sidebar nav .active,
+.sidebar nav button:hover {
+  background: #1b4554;
+  color: #f4ffff;
+}
+
+.sidebar .profile {
+  border-color: #294657;
+}
+
+.sidebar .profile span {
+  color: #a9bdce;
+}
+
+.primary-btn,
+.answer-row button {
+  background: var(--accent);
+}
+
+.app.dark .sidebar {
+  background: #102c3d;
+  border-color: #294657;
+}
+
+.app.dark .sidebar nav .active,
+.app.dark .sidebar nav button:hover {
+  background: #1b4554;
+  color: #f4ffff;
+}
+
+.dashboard-stats article,
+.security-card {
+  background: #fff;
+}
+
+.project-row.header {
+  background: #fff;
+}
+
+.daily-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.95fr);
+  min-height: 200px;
+  margin-bottom: 22px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: transparent;
+}
+
+.daily-banner-copy {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px 16px 4px;
+  background: linear-gradient(110deg, #f0f7fc, #f6f9ff);
+}
+
+.daily-banner-card {
+  width: min(100%, 560px);
+}
+
+.daily-banner-date {
+  margin: 0 0 7px;
+  color: #426781;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.daily-banner-card h1 {
+  margin: 0 0 6px;
+  color: #17324d;
+  font: 700 clamp(22px, 2.1vw, 28px)/1.15 'Space Grotesk';
+  letter-spacing: -0.7px;
+}
+
+.daily-banner-message {
+  margin: 0 0 12px;
+  color: #48657a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.daily-banner-card .primary-btn {
+  color: #102c3d;
+  box-shadow: 0 6px 16px rgb(8 207 197 / 18%);
+}
+
+.daily-banner-card .primary-btn:hover {
+  background: #19c5c5;
+}
+
+.daily-banner-photo {
+  position: relative;
+  min-width: 0;
+  min-height: 200px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #c8dcf2, #dddffc 55%, #c7e7e8);
+}
+
+.daily-banner-photo::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(18 44 75 / 12%), transparent 35%, rgb(18 44 75 / 8%));
+  content: "";
+  pointer-events: none;
+}
+
+.daily-banner-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  object-fit: cover;
+}
+
+.daily-banner-photo-label {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 1;
+  padding: 7px 10px;
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 20px;
+  background: rgb(17 39 67 / 45%);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: capitalize;
+  backdrop-filter: blur(10px);
+}
+
+.app.dark .daily-banner-card h1 {
+  color: #17324d;
+}
+
+.app.dark .daily-banner-date,
+.app.dark .daily-banner-message {
+  color: #426781;
+}
+
 @media (max-width: 700px) {
+  .daily-banner {
+    grid-template-columns: minmax(0, 1.55fr) minmax(105px, 0.8fr);
+    min-height: 180px;
+  }
+
+  .daily-banner-copy {
+    padding: 12px 10px 12px 2px;
+  }
+
+  .daily-banner-date {
+    margin-bottom: 6px;
+    font-size: 9px;
+  }
+
+  .daily-banner-card h1 {
+    margin-bottom: 5px;
+    font-size: 21px;
+  }
+
+  .daily-banner-message {
+    margin-bottom: 9px;
+    font-size: 11px;
+  }
+
+  .daily-banner-card .primary-btn {
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+
+  .daily-banner-photo,
+  .daily-banner-photo img {
+    min-height: 180px;
+  }
+
+  .daily-banner-photo {
+    border-radius: 10px;
+  }
+
+  .daily-banner-photo-label {
+    right: 7px;
+    bottom: 7px;
+    padding: 5px 7px;
+    font-size: 8px;
+  }
+
   .main {
     margin-left: 0;
+  }
+}
+
+@media (max-width: 390px) {
+  .daily-banner {
+    grid-template-columns: minmax(0, 1.5fr) minmax(96px, 0.8fr);
+    min-height: 170px;
+  }
+
+  .daily-banner-card h1 {
+    font-size: 19px;
+  }
+
+  .daily-banner-photo,
+  .daily-banner-photo img {
+    min-height: 170px;
   }
 }
 
