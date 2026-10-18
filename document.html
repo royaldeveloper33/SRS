@@ -614,19 +614,494 @@ function applyAIResult(){
 }
 
 /* // Export / print the SRS */
-function exportDocument(){
-  const content=document.getElementById("document").innerHTML;
-  const win=window.open("","_blank");
+function exportDocument() {
+  alert("Updated PDF exporter is running!");
+  const source = document.getElementById("document");
+  if (!source) {
+    alert("Document content not found.");
+    return;
+  }
+
+  const content = source.cloneNode(true);
+
+  // Remove editor controls from the exported document
+  content.querySelectorAll(
+    ".section-actions, .mini-btn, button, input, textarea, select"
+  ).forEach(element => element.remove());
+
+  // Remove editor-only classes
+  content.querySelectorAll(".selected").forEach(element => {
+    element.classList.remove("selected");
+  });
+  // Convert basic Markdown formatting inside text nodes.
+// Preserve existing HTML elements and their formatting.
+const walker = document.createTreeWalker(
+  content,
+  NodeFilter.SHOW_TEXT
+);
+
+const textNodes = [];
+let currentNode;
+
+while ((currentNode = walker.nextNode())) {
+  if (currentNode.nodeValue && /(\*\*|__|~~|`)/.test(currentNode.nodeValue)) {
+    textNodes.push(currentNode);
+  }
+}
+
+textNodes.forEach(node => {
+  const parent = node.parentElement;
+
+  // Do not modify code blocks, scripts, styles, or existing links.
+  if (!parent || parent.closest("pre, code, script, style, a")) return;
+
+  const text = node.nodeValue;
+  const pattern = /(\*\*|__)(.+?)\1|~~(.+?)~~|`([^`]+)`/g;
+
+  if (!pattern.test(text)) return;
+
+  pattern.lastIndex = 0;
+
+  const fragment = document.createDocumentFragment();
+  let lastIndex = 0;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    fragment.appendChild(
+      document.createTextNode(text.slice(lastIndex, match.index))
+    );
+
+    let element;
+
+    if (match[2] !== undefined) {
+      element = document.createElement("strong");
+      element.textContent = match[2];
+    } else if (match[3] !== undefined) {
+      element = document.createElement("del");
+      element.textContent = match[3];
+    } else {
+      element = document.createElement("code");
+      element.textContent = match[4];
+    }
+
+    fragment.appendChild(element);
+    lastIndex = pattern.lastIndex;
+  }
+
+  fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+  node.replaceWith(fragment);
+});
+
+  // Extract the document title and project name
+  const firstHeading = content.querySelector("h1");
+  const projectName = firstHeading
+    ? firstHeading.textContent.trim()
+    : "Software Requirements Specification";
+
+  const firstSection = content.querySelector(".section > div[contenteditable]");
+  const projectDescription = firstSection
+    ? firstSection.querySelector("p")?.textContent.trim() || ""
+    : "";
+
+  // Build the cover separately from the document body
+  const cover = `
+    <section class="cover">
+      <div class="cover-brand">
+        <span class="brand-mark">S</span>
+        <div>
+          <strong>SRS AI</strong>
+          <small>Turn Ideas Into Documents</small>
+        </div>
+      </div>
+
+      <div class="cover-content">
+        <p class="eyebrow">SOFTWARE DOCUMENTATION</p>
+        <h1>Software Requirements<br>
+          <span>Specification (SRS)</span>
+        </h1>
+        <p class="cover-description">${escapeHtml(projectDescription)}</p>
+
+        <div class="cover-meta">
+          <div><small>PROJECT</small><strong>${escapeHtml(projectName)}</strong></div>
+          <div><small>DOCUMENT</small><strong>Software Requirements Specification</strong></div>
+          <div><small>GENERATED</small><strong>${new Date().toLocaleDateString("en-GB")}</strong></div>
+        </div>
+      </div>
+
+      <div class="cover-bottom">SRS AI <span>•</span> SOFTWARE REQUIREMENTS</div>
+    </section>
+  `;
+
+  // Avoid repeating the first section's cover title in the body
+  const firstContent = content.querySelector(".section > div[contenteditable]");
+  if (firstContent) {
+    const firstH1 = firstContent.querySelector("h1");
+    if (firstH1) firstH1.remove();
+  }
+
+  const win = window.open("", "_blank");
+
+  if (!win) {
+    alert("Please allow pop-ups to export the PDF.");
+    return;
+  }
+
   win.document.write(`
-    <!DOCTYPE html><html><head><title>Food Delivery Application - SRS</title>
-    <style>
-      body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;line-height:1.6;color:#222}
-      h1,h2,h3{margin-top:28px}table{width:100%;border-collapse:collapse}
-      th,td{border:1px solid #aaa;padding:9px;text-align:left}th{background:#eee}
-    </style></head><body>${content}</body></html>`);
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>SRS AI - Software Requirements Specification</title>
+
+      <style>
+        @page {
+          size: A4;
+          margin: 18mm 17mm 20mm;
+        }
+
+        @page:first {
+          margin: 0;
+        }
+
+        :root {
+          --navy: #17142f;
+          --purple: #39256f;
+          --purple-light: #eeeafb;
+          --text: #25233b;
+          --muted: #77758d;
+          --border: #dedbed;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        body {
+          margin: 0;
+          font-family: Arial, Helvetica, sans-serif;
+          color: var(--text);
+          font-size: 10pt;
+          line-height: 1.65;
+          background: white;
+        }
+
+        .cover {
+          min-height: 297mm;
+          padding: 20mm 18mm;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          color: white;
+          background:
+            radial-gradient(ellipse at 100% 0%, #7966b9 0%, transparent 45%),
+            radial-gradient(ellipse at 0% 100%, #513c91 0%, transparent 45%),
+            linear-gradient(140deg, #111027 0%, #211743 55%, #3b286e 100%);
+          page-break-after: always;
+          break-after: page;
+          overflow: hidden;
+        }
+
+        .cover-brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .brand-mark {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          display: grid;
+          place-items: center;
+          background: #eeeafb;
+          color: var(--purple);
+          font-size: 21px;
+          font-weight: 800;
+        }
+
+        .cover-brand strong {
+          display: block;
+          font-size: 19px;
+          letter-spacing: .3px;
+        }
+
+        .cover-brand small {
+          display: block;
+          margin-top: 3px;
+          color: #d1c9ed;
+          font-size: 8pt;
+        }
+
+        .cover-content {
+          margin: auto 0;
+          padding: 22mm 0;
+        }
+
+        .eyebrow {
+          color: #d0bfff;
+          font-size: 9pt;
+          font-weight: bold;
+          letter-spacing: 2px;
+        }
+
+        .cover h1 {
+          margin: 20px 0;
+          font-size: 34pt;
+          line-height: 1.15;
+          color: white;
+          letter-spacing: -1px;
+        }
+
+        .cover h1 span {
+          color: #c0a9ff;
+        }
+
+        .cover-description {
+          max-width: 135mm;
+          color: #e0dced;
+          font-size: 12pt;
+        }
+
+        .cover-meta {
+          margin-top: 22mm;
+          padding-top: 9mm;
+          border-top: 1px solid #746696;
+          display: grid;
+          gap: 15px;
+        }
+
+        .cover-meta small,
+        .cover-meta strong {
+          display: block;
+        }
+
+        .cover-meta small {
+          color: #c0b4df;
+          font-size: 8pt;
+          letter-spacing: 1px;
+        }
+
+        .cover-meta strong {
+          margin-top: 4px;
+          font-size: 10pt;
+          overflow-wrap: anywhere;
+        }
+
+        .cover-bottom {
+          padding-top: 8mm;
+          border-top: 1px solid #746696;
+          color: #e0dced;
+          font-size: 8pt;
+          letter-spacing: 1px;
+        }
+
+        .cover-bottom span {
+          color: #c0a9ff;
+          padding: 0 8px;
+        }
+
+        article.document {
+          width: 100%;
+        }
+
+        .section {
+          position: relative;
+          margin: 0 0 24px;
+          padding: 0;
+          border: 0;
+          background: white;
+          break-inside: auto;
+        }
+
+        .section > div[contenteditable] {
+          outline: none;
+        }
+
+        h1, h2, h3, h4 {
+          color: var(--navy);
+          line-height: 1.3;
+          break-after: avoid;
+        }
+
+        h1 {
+          font-size: 25pt;
+          margin: 0 0 20px;
+        }
+
+        h2 {
+          margin: 28px 0 12px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid var(--purple-light);
+          font-size: 19pt;
+        }
+
+        h3 {
+          margin: 22px 0 8px;
+          color: var(--purple);
+          font-size: 13pt;
+        }
+
+        h4 {
+          font-size: 11pt;
+        }
+
+        p {
+          margin: 8px 0 12px;
+          orphans: 3;
+          widows: 3;
+        }
+
+        strong, b {
+          color: var(--navy);
+        }
+
+        ul, ol {
+          padding-left: 24px;
+          margin: 10px 0 16px;
+        }
+
+        li {
+          margin: 4px 0;
+          padding-left: 3px;
+        }
+
+        li::marker {
+          color: var(--purple);
+        }
+
+        blockquote {
+          margin: 18px 0;
+          padding: 14px 18px;
+          border-left: 4px solid var(--purple);
+          border-radius: 0 8px 8px 0;
+          background: var(--purple-light);
+          color: var(--text);
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 16px 0 24px;
+          font-size: 9pt;
+          page-break-inside: auto;
+        }
+
+        thead {
+          display: table-header-group;
+        }
+
+        tr {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        th {
+          padding: 10px 9px;
+          background: var(--purple);
+          color: white;
+          text-align: left;
+          font-weight: bold;
+          border: 1px solid var(--purple);
+        }
+
+        td {
+          padding: 8px 9px;
+          border: 1px solid var(--border);
+          vertical-align: top;
+          overflow-wrap: anywhere;
+        }
+
+        tbody tr:nth-child(even) {
+          background: #f6f4fb;
+        }
+
+        code {
+          font-family: Consolas, monospace;
+          background: #f0edf8;
+          padding: 2px 4px;
+          border-radius: 3px;
+          overflow-wrap: anywhere;
+        }
+
+        pre {
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+          padding: 12px;
+          background: #f4f1fa;
+          border: 1px solid var(--border);
+          border-radius: 7px;
+        }
+
+        img {
+          max-width: 100%;
+          height: auto;
+        }
+
+        a {
+          color: var(--purple);
+          overflow-wrap: anywhere;
+        }
+
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          .section {
+            box-shadow: none;
+          }
+
+          h2, h3, h4 {
+            break-after: avoid;
+          }
+
+          table {
+            break-inside: auto;
+          }
+        }
+      </style>
+    </head>
+
+    <body>
+      ${cover}
+      ${content.outerHTML}
+      <script>
+        function escapeHtml(value) {
+          return String(value).replace(/[&<>"']/g, function(char) {
+            return {
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;"
+            }[char];
+          });
+        }
+        window.onload = function() {
+          setTimeout(function() {
+            window.focus();
+            window.print();
+          }, 700);
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+
   win.document.close();
-  win.focus();
-  setTimeout(()=>win.print(),500);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, function(char) {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char];
+  });
 }
 
 /* // Close AI modal */

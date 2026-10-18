@@ -616,3 +616,241 @@
 }
 
 .dashboard-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 20px}.dashboard-stats article{padding:16px;border:1px solid var(--line);border-radius:11px;background:linear-gradient(135deg,#fff,#f5fbf8);box-shadow:0 8px 20px rgb(25 35 41 / 4%)}.dashboard-stats strong{display:block;color:var(--dark);font:700 25px 'Space Grotesk'}.dashboard-stats span{display:block;margin-top:4px;color:var(--muted);font-size:10px;font-weight:700}.choice-answer{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}.choice-answer button{min-height:34px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:11px;font-weight:700;transition:background .18s ease,border-color .18s ease,transform .18s ease}.choice-answer button:hover,.choice-answer button.selected{border-color:var(--accent);background:var(--soft);color:var(--dark);transform:translateY(-1px)}.choice-answer.yes-no button{min-width:82px}.security-card{background:linear-gradient(145deg,#fff,#f6fcf9)}.security-card>p{margin:7px 0 16px}.security-status{display:flex;align-items:center;gap:9px;padding:11px 0;border-top:1px solid var(--line)}.security-status>span{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;background:var(--soft);color:var(--dark);font-size:11px}.security-status b,.security-status small{display:block}.security-status b{font-size:11px}.security-status small{margin-top:2px;color:var(--muted);font-size:10px}.app.dark .dashboard-stats article,.app.dark .security-card{background:linear-gradient(145deg,#1b2521,#151d1a);border-color:#34443e}.app.dark .choice-answer button{background:#151d1a;border-color:#34443e;color:#f1f5f3}.app.dark .choice-answer button:hover,.app.dark .choice-answer button.selected{background:#19352a;border-color:#19a974;color:#fff}@media(max-width:700px){.dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.dashboard-stats article{padding:13px}.dashboard-stats strong{font-size:22px}}
+
+/* =========================================
+   SRS AI LOGIN — SMOKY NAVY PURPLE + MIST
+   Login screen design only
+   ========================================= */
+
+.auth-page {
+  background: #f8f7fc;
+  color: #19172f;
+}
+
+/* Left branding panel */
+.auth-page .brand-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #eae7f8;
+  border-right: 1px solid #ddd8f0;
+}
+
+/* Decorative background shapes */
+.auth-page .brand-panel::before,
+.auth-page .brand-panel::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-page .brand-panel::before {
+  width: 360px;
+  height: 360px;
+  top: -245px;
+  right: -110px;
+  background: rgba(112, 91, 181, 0.13);
+}
+
+.auth-page .brand-panel::after {
+  width: 340px;
+  height: 340px;
+  bottom: -235px;
+  right: -220px;
+  background: rgba(112, 91, 181, 0.12);
+}
+
+/* Brand logo */
+.auth-page .brand-mark {
+  background: #24164f;
+  color: #ffffff;
+}
+
+.auth-page .brand i {
+  color: #302064;
+}
+
+/* Left panel heading */
+.auth-page .brand-content small,
+.auth-page .auth-card > small {
+  color: #302064;
+}
+
+.auth-page .brand-content h1 {
+  color: #19172f;
+}
+
+.auth-page .brand-content em {
+  color: #302064;
+}
+
+/* Left panel description */
+.auth-page .brand-content p,
+.auth-page .auth-card > p {
+  color: #77758d;
+}
+
+/* Feature list */
+.auth-page .brand-content > b {
+  position: relative;
+  padding-left: 33px;
+  color: #19172f;
+  line-height: 22px;
+}
+
+.auth-page .brand-content > b::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #302064;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Footer */
+.auth-page .brand-panel footer {
+  color: #77758d;
+}
+
+/* Right panel */
+.auth-page .form-panel {
+  background: #f8f7fc;
+}
+
+/* Login form */
+.auth-page .auth-card {
+  width: min(410px, 100%);
+}
+
+.auth-page .auth-card h2 {
+  color: #19172f;
+}
+
+.auth-page .auth-card label {
+  color: #19172f;
+}
+
+/* Input fields */
+.auth-page .auth-card input {
+  background: #eeecfa;
+  border: 1px solid #dfdbef;
+  border-radius: 7px;
+  color: #19172f;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-page .auth-card input:focus {
+  border-color: #7463b0;
+  box-shadow: 0 0 0 3px rgba(48, 32, 100, 0.08);
+}
+
+/* Password visibility button */
+.auth-page .password-toggle {
+  color: #302064;
+}
+
+/* Sign-in and verification buttons */
+.auth-page .primary-btn {
+  background: #302064;
+  color: #ffffff;
+  border: none;
+  border-radius: 7px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.auth-page .primary-btn:hover:not(:disabled) {
+  background: #24164f;
+}
+
+.auth-page .primary-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Divider */
+.auth-page .switch {
+  color: #77758d;
+}
+
+.auth-page .switch button {
+  color: #302064;
+  font-weight: 700;
+}
+
+.auth-page .switch button:hover {
+  color: #24164f;
+}
+
+/* Google sign-in container */
+.auth-page .google-login-wrapper {
+  width: 100%;
+}
+
+/* Login progress */
+.auth-page .login-progress-fill {
+  background: #ffffff;
+}
+
+.auth-page .google-progress .login-progress-fill {
+  background: #302064;
+}
+
+/* Email verification messages */
+.auth-page .auth-card > p b {
+  color: #302064;
+}
+
+/* Preserve readable errors */
+.auth-page .message.error {
+  background: #fff1f1;
+  color: #a43535;
+}
+
+/* Responsive login design */
+@media (max-width: 1000px) {
+  .auth-page {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .auth-page .brand-panel {
+    display: flex;
+    padding: 32px;
+  }
+
+  .auth-page .brand-content h1 {
+    font-size: clamp(30px, 4vw, 42px);
+    letter-spacing: -1.5px;
+  }
+}
+
+@media (max-width: 700px) {
+  .auth-page {
+    display: block;
+    min-height: 100vh;
+    background: #f8f7fc;
+  }
+
+  .auth-page .brand-panel {
+    display: none;
+  }
+
+  .auth-page .form-panel {
+    min-height: 100vh;
+    padding: 32px 22px;
+    background: #f8f7fc;
+  }
+
+  .auth-page .auth-card {
+    width: 100%;
+    max-width: 410px;
+    padding-top: 7vh;
+  }
+}
