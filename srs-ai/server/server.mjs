@@ -259,12 +259,14 @@ app.post("/api/me/api-key", handle(async (request, response) => {
   await prisma.users.update({ where: { id: request.user.id }, data: { api_key_hash: crypto.createHash("sha256").update(key).digest("hex"), api_key_created_at: new Date() } });
   return response.status(201).json({ key });
 }));
+app.post("/api/feedback", handle(async (request, response) => { const message = typeof request.body.message === "string" ? request.body.message.trim() : ""; if (message.length < 5 || message.length > 2000) return response.status(400).json({ error: "Feedback must be between 5 and 2,000 characters" }); await prisma.feedback.create({ data: { user_id: request.user.id, message } }); response.status(201).json({ message: "Thank you for your feedback." }); }));
 
-const projectSelect = { id: true, user_id: true, name: true, client_idea: true, status: true, created_at: true, updated_at: true };
+const projectSelect = { id: true, user_id: true, name: true, client_idea: true, status: true, client_name: true, deadline: true, notes: true, color: true, icon: true, is_favorite: true, created_at: true, updated_at: true };
+const projectActivity = (projectId, action, detail) => prisma.project_activities.create({ data: { project_id: projectId, action, detail } });
 app.get("/api/projects", handle(async (request, response) => {
   const search = typeof request.query.search === "string" ? request.query.search.trim() : "";
   const status = typeof request.query.status === "string" && ["draft", "in_progress", "complete", "archived"].includes(request.query.status) ? request.query.status : undefined;
-  const sort = request.query.sort === "name" ? { name: "asc" } : request.query.sort === "updated" ? { updated_at: "desc" } : { created_at: "desc" };
+  const sort = request.query.sort === "name" ? { name: "asc" } : request.query.sort === "deadline" ? { deadline: "asc" } : request.query.sort === "updated" ? { updated_at: "desc" } : { created_at: "desc" };
   return response.json(await prisma.projects.findMany({ where: { user_id: request.user.id, ...(status ? { status } : {}), ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { client_idea: { contains: search, mode: "insensitive" } }] } : {}) }, orderBy: sort, select: projectSelect }));
 }));
 app.get("/api/users/:userId/projects", handle(async (request, response) => {
@@ -273,9 +275,10 @@ app.get("/api/users/:userId/projects", handle(async (request, response) => {
   return response.json(await prisma.projects.findMany({ where: { user_id: userId }, orderBy: { updated_at: "desc" }, select: projectSelect }));
 }));
 app.post("/api/projects", handle(async (request, response) => {
-  const { name, clientIdea, template, status } = request.body;
+  const { name, clientIdea, template, status, client_name, deadline, notes, color, icon } = request.body;
   if (typeof name !== "string" || !name.trim() || name.trim().length > 255 || typeof clientIdea !== "string" || !clientIdea.trim()) return response.status(400).json({ error: "Project name and software idea are required" });
-  const project = await prisma.projects.create({ data: { user_id: request.user.id, name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : "draft" }, select: projectSelect });
+  const project = await prisma.projects.create({ data: { user_id: request.user.id, name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : "draft", client_name: typeof client_name === "string" ? client_name.trim().slice(0, 150) || null : null, deadline: typeof deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(deadline) ? new Date(`${deadline}T00:00:00.000Z`) : null, notes: typeof notes === "string" ? notes.trim() || null : null, color: typeof color === "string" ? color.slice(0, 20) : null, icon: typeof icon === "string" ? icon.slice(0, 10) : null }, select: projectSelect });
+  await projectActivity(project.id, "created", "Project created");
   if (template && typeof template === "object" && typeof template.content === "string") await prisma.srs_documents.create({ data: { project_id: project.id, title: template.title || "Software Requirements Specification", content: { text: template.content }, version: 1 } });
   return response.status(201).json(project);
 }));
@@ -288,10 +291,15 @@ app.get("/api/projects/:projectId", handle(async (request, response) => {
 app.patch("/api/projects/:projectId", handle(async (request, response) => {
   const projectId = parseId(request.params.projectId);
   if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" });
-  const { name, clientIdea, status } = request.body;
+  const { name, clientIdea, status, client_name, deadline, notes, color, icon, is_favorite } = request.body;
   if (typeof name !== "string" || !name.trim() || typeof clientIdea !== "string" || !clientIdea.trim()) return response.status(400).json({ error: "Project name and software idea are required" });
-  return response.json(await prisma.projects.update({ where: { id: projectId }, data: { name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : undefined, updated_at: new Date() }, select: projectSelect }));
+  const project = await prisma.projects.update({ where: { id: projectId }, data: { name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : undefined, client_name: typeof client_name === "string" ? client_name.trim().slice(0, 150) || null : undefined, deadline: typeof deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(deadline) ? new Date(`${deadline}T00:00:00.000Z`) : deadline === null ? null : undefined, notes: typeof notes === "string" ? notes.trim() || null : undefined, color: typeof color === "string" ? color.slice(0, 20) : undefined, icon: typeof icon === "string" ? icon.slice(0, 10) : undefined, is_favorite: typeof is_favorite === "boolean" ? is_favorite : undefined, updated_at: new Date() }, select: projectSelect });
+  await projectActivity(projectId, "updated", "Project details updated");
+  return response.json(project);
 }));
+app.post("/api/projects/:projectId/archive", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); const project = await prisma.projects.update({ where: { id: projectId }, data: { status: "archived", updated_at: new Date() }, select: projectSelect }); await projectActivity(projectId, "archived", "Project archived"); response.json(project); }));
+app.post("/api/projects/:projectId/favorite", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); const current = await prisma.projects.findUniqueOrThrow({ where: { id: projectId }, select: { is_favorite: true } }); const project = await prisma.projects.update({ where: { id: projectId }, data: { is_favorite: !current.is_favorite, updated_at: new Date() }, select: projectSelect }); await projectActivity(projectId, project.is_favorite ? "favorited" : "unfavorited", project.is_favorite ? "Project pinned as favorite" : "Project removed from favorites"); response.json(project); }));
+app.get("/api/projects/:projectId/activity", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); response.json(await prisma.project_activities.findMany({ where: { project_id: projectId }, orderBy: { created_at: "desc" }, take: 15 })); }));
 app.post("/api/projects/:projectId/duplicate", handle(async (request, response) => {
   const projectId = parseId(request.params.projectId);
   const source = projectId && await prisma.projects.findFirst({ where: { id: projectId, user_id: request.user.id }, include: { clarification_questions: true, srs_documents: { orderBy: { version: "desc" }, take: 1 } } });
