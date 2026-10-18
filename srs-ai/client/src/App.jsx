@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import "./App.css";
+import "./theme.css";
 
 const token = () => sessionStorage.getItem("srs-token");
 const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -12,9 +13,26 @@ const api = async (path, options = {}) => {
   if (!response.ok) throw new Error(typeof body === "string" ? body || `Request failed (${response.status})` : body?.error || `Request failed (${response.status})`);
   return body;
 };
-const initials = (name = "") => name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "U";
 const date = (value) => value ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
-const Brand = () => <div className="brand"><span className="brand-mark">S</span><span>SRS <i>AI</i></span></div>;
+const projectIconColors = ["#7863aa", "#526c9f", "#a15f91", "#4c827e", "#aa744c", "#687da8"];
+const projectIconColor = (value) => {
+  const key = String(value ?? "");
+  const colorIndex = [...key].reduce(
+    (value, character) => (value * 31 + character.charCodeAt(0)) % projectIconColors.length,
+    0
+  );
+  return projectIconColors[colorIndex];
+};
+const profileGradient = (value) => {
+  const key = String(value ?? "");
+  const colorIndex = [...key].reduce(
+    (result, character) => (result * 31 + character.charCodeAt(0)) % projectIconColors.length,
+    0
+  );
+  const nextColor = (colorIndex + 2) % projectIconColors.length;
+  return `linear-gradient(135deg, ${projectIconColors[colorIndex]}, ${projectIconColors[nextColor]})`;
+};
+const Brand = () => <div className="brand" aria-label="SRS AI"><span className="brand-mark" title="SRS AI">S</span><span>SRS <i>AI</i></span></div>;
 const GenerateLoader = ({ label = "Preparing your workspace", detail = "Putting everything together for you…", progress }) => <div className="generate-loader" role="status" aria-live="polite"><div className="loader-orbit"><i /><i /><i /></div><div className="loader-copy"><b>{label}</b><span>{detail}</span>{typeof progress === "number" && <div className="progress-track"><i style={{ width: `${progress}%` }} /></div>}</div>{typeof progress === "number" ? <strong className="progress-value">{progress}%</strong> : <em className="loader-dots">•••</em>}</div>;
 const InlineLoader = ({ children = "Working…" }) => <span className="inline-loader" role="status"><i />{children}</span>;
 const questionChoices = (question) => { const match = question.match(/\[([^\]]+)\]/); if (match) return match[1].split("|").map((item) => item.trim()).filter(Boolean); return /^(do |is |are |will |can |should |does |has |have )/i.test(question.trim()) ? ["Yes", "No"] : []; };
@@ -229,24 +247,23 @@ await new Promise((resolve) => setTimeout(resolve, 800));
 <div className="switch">{register ? "Already have an account?" : "New to SRS AI?"} <button onClick={changeMode}>{register ? "Sign in" : "Create account"}</button></div></>}</div></section></main>;
 }
 
-function Sidebar({ user, page, navigate, logout }) {
-  return <aside className="sidebar"><Brand /><small>WORKSPACE</small><nav><button className={page === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}>▦ <span>Dashboard</span></button><button className={page === "project" ? "active" : ""} onClick={() => navigate("dashboard")}>▤ <span>Projects</span></button><button className={page === "templates" ? "active" : ""} onClick={() => navigate("templates")}>▱ <span>Templates</span></button><button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}>⚙ <span>Settings</span></button></nav><div className="spacer" /><div className="profile"><i className="sidebar-profile-avatar">
-  {user.profile_image || user.profilePhoto ? (
-    <img
-      src={user.profile_image || user.profilePhoto}
-      alt="Profile"
-    />
-  ) : (
-    initials(user.name)
-  )}
-</i><div><b>{user.name}</b><span>{user.email}</span></div><button onClick={logout}>↪</button></div></aside>;
+function Sidebar({ page, navigate }) {
+  const navItems = [
+    { id: "dashboard", label: "Dashboard", icon: <svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z" /></svg> },
+    { id: "projects", label: "Projects", icon: <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5" /></svg> },
+    { id: "templates", label: "Templates", icon: <svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg> },
+    { id: "settings", label: "Settings", icon: <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" /><path d="m19.4 15 .1.1 1.1.8-1.5 2.6-1.3-.5a8 8 0 0 1-1.4.8l-.2 1.4h-3l-.2-1.4a8 8 0 0 1-1.4-.8l-1.3.5-1.5-2.6 1.1-.8a7 7 0 0 1 0-1.6l-1.1-.8 1.5-2.6 1.3.5a8 8 0 0 1 1.4-.8l.2-1.4h3l.2 1.4a8 8 0 0 1 1.4.8l1.3-.5 1.5 2.6-1.1.8a7 7 0 0 1 0 1.6Z" /></svg> }
+  ];
+  const activePage = page === "project" ? "projects" : page;
+
+  return <aside className="sidebar"><Brand /><small>WORKSPACE</small><nav aria-label="Workspace navigation">{navItems.map((item) => <button type="button" key={item.id} className={activePage === item.id ? "active" : ""} onClick={() => navigate(item.id)} aria-current={activePage === item.id ? "page" : undefined} title={item.label}><span className="nav-icon" aria-hidden="true">{item.icon}</span><span className="nav-label">{item.label}</span></button>)}</nav></aside>;
 }
 
-function MobileNav({ page, navigate }) { return <nav className="mobile-nav" aria-label="Main navigation"><button className={page === "dashboard" || page === "project" ? "active" : ""} onClick={() => navigate("dashboard")}><i>▦</i><span>Projects</span></button><button className={page === "templates" ? "active" : ""} onClick={() => navigate("templates")}><i>▱</i><span>Templates</span></button><button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}><i>⚙</i><span>Settings</span></button></nav>; }
+function MobileNav({ page, navigate }) { return <nav className="mobile-nav" aria-label="Main navigation"><button className={page === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}><i>⌂</i><span>Dashboard</span></button><button className={page === "projects" || page === "project" ? "active" : ""} onClick={() => navigate("projects")}><i>▤</i><span>Projects</span></button><button className={page === "templates" ? "active" : ""} onClick={() => navigate("templates")}><i>▱</i><span>Templates</span></button><button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}><i>⚙</i><span>Settings</span></button></nav>; }
 
-function Layout({ user, page, navigate, logout, children }) { return <div className={`app ${localStorage.getItem("srs-theme") || "light"}`}><Sidebar {...{ user, page, navigate, logout }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span></header>{children}</main><MobileNav {...{ page, navigate }} /></div>; }
+function Layout({ user, page, navigate, logout, children }) { return <div className={`app ${localStorage.getItem("srs-theme") || "light"}`}><Sidebar {...{ page, navigate }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span><details className="topbar-profile"><summary aria-label={`Profile: ${user.name}`}><span className="topbar-avatar" style={{ backgroundImage: profileGradient(user.id ?? user.email ?? user.name) }}>{user.profile_image || user.profilePhoto ? <img src={user.profile_image || user.profilePhoto} alt="" /> : user.name?.trim().charAt(0).toUpperCase() || "U"}</span><span className="topbar-profile-name">{user.name}</span><span className="topbar-profile-caret" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg></span></summary><div className="topbar-profile-menu"><span>{user.email}</span><button type="button" onClick={() => navigate("settings")}>Settings</button><button type="button" onClick={logout}>Sign out</button></div></details></header>{children}</main><MobileNav {...{ page, navigate }} /></div>; }
 
-function Dashboard({ user, navigate, openProject, logout }) {const [loading, setLoading] = useState(true);
+function Dashboard({ user, navigate, openProject, logout, page }) {const [loading, setLoading] = useState(true);
 const [projectProgress, setProjectProgress] = useState(0);
   const [projects, setProjects] = useState([]); const [stats, setStats] = useState({ total: 0, draft: 0, completed: 0, exported: 0 }); const [search, setSearch] = useState(""); const [status, setStatus] = useState(""); const [sort, setSort] = useState("updated"); const [form, setForm] = useState({ name: "", clientIdea: "" }); const [showCreate, setShowCreate] = useState(false); const [error, setError] = useState("");  
 const load = useCallback(async () => {
@@ -276,11 +293,11 @@ const load = useCallback(async () => {
 }, [search, status, sort]);  useEffect(() => { const timer = setTimeout(load, 180); return () => clearTimeout(timer); }, [load]);
   const create = async (event) => { event.preventDefault(); try { const project = await api("/api/projects", { method: "POST", body: JSON.stringify(form) }); setShowCreate(false); setForm({ name: "", clientIdea: "" }); openProject(project.id); } catch (err) { setError(err.message); } };
   const remove = async (project) => { if (!window.confirm(`Delete ${project.name}? This permanently removes its SRS, versions, and exports.`)) return; try { await api(`/api/projects/${project.id}`, { method: "DELETE" }); await load(); } catch (err) { setError(err.message); } };
-  return <Layout user={user} page="dashboard" navigate={navigate} logout={logout}><section className="content"><div className="welcome"><div><small>YOUR WORKSPACE</small><h1>Good to see you, {user.name.split(" ")[0]}.</h1><p>Turn ideas into requirements your team can build with confidence.</p></div><button className="primary-btn" onClick={() => setShowCreate(true)}>＋ New project</button></div><div className="dashboard-stats" aria-label="Workspace statistics"><article><strong>{stats.total}</strong><span>Total projects</span></article><article><strong>{stats.draft}</strong><span>Draft projects</span></article><article><strong>{stats.completed}</strong><span>Completed</span></article><article><strong>{stats.exported}</strong><span>Documents exported</span></article></div>{error && <div className="message error">{error}</div>}<div className="toolbar"><input placeholder="Search projects…" value={search} onChange={(e) => setSearch(e.target.value)} /><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="in_progress">In progress</option><option value="complete">Complete</option><option value="archived">Archived</option></select><select value={sort} onChange={(e) => setSort(e.target.value)}><option value="updated">Recently updated</option><option value="name">Name</option></select></div><section className="panel">{loading ? <GenerateLoader
+  return <Layout user={user} page={page} navigate={navigate} logout={logout}><section className="content"><div className="welcome"><div><small>YOUR WORKSPACE</small><h1>Good to see you, {user.name.split(" ")[0]}.</h1><p>Turn ideas into requirements your team can build with confidence.</p></div><button className="primary-btn" onClick={() => setShowCreate(true)}>＋ New project</button></div><div className="dashboard-stats" aria-label="Workspace statistics"><article><strong>{stats.total}</strong><span>Total projects</span></article><article><strong>{stats.draft}</strong><span>Draft projects</span></article><article><strong>{stats.completed}</strong><span>Completed</span></article><article><strong>{stats.exported}</strong><span>Documents exported</span></article></div>{error && <div className="message error">{error}</div>}<div className="toolbar"><input placeholder="Search projects…" value={search} onChange={(e) => setSearch(e.target.value)} /><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="in_progress">In progress</option><option value="complete">Complete</option><option value="archived">Archived</option></select><select value={sort} onChange={(e) => setSort(e.target.value)}><option value="updated">Recently updated</option><option value="name">Name</option></select></div><section className="panel">{loading ? <GenerateLoader
   label={`Opening your project... ${projectProgress}%`}
   detail="Loading your requirements workspace…"
   progress={projectProgress}
-/> : projects.length === 0 ? <div className="empty"><b>{search || status ? "No matching projects" : "Your workspace is empty"}</b><span>{search || status ? "Try a different filter." : "Create your first project to get started."}</span></div> : <><div className="project-row header"><span>Project</span><span>Status</span><span>Updated</span><span /></div>{projects.map((project) => <div className="project-row" key={project.id}><button className="project-link" onClick={() => openProject(project.id)}><i>▤</i><span><b>{project.name}</b></span></button><span className="status">{project.status.replace("_", " ")}</span><span>{date(project.updated_at)}</span><button className="row-delete" title={`Delete ${project.name}`} onClick={() => remove(project)}>×</button></div>)}</>}</section></section>{showCreate && <Modal title="Create a project" onClose={() => setShowCreate(false)}><form onSubmit={create}><label>Project name<input required maxLength="255" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label><label>What are you building?<textarea required rows="5" value={form.clientIdea} onChange={(e) => setForm({ ...form, clientIdea: e.target.value })} /></label><button className="primary-btn full">Create project →</button></form></Modal>}</Layout>;
+/> : projects.length === 0 ? <div className="empty"><b>{search || status ? "No matching projects" : "Your workspace is empty"}</b><span>{search || status ? "Try a different filter." : "Create your first project to get started."}</span></div> : <><div className="project-row header"><span>Project</span><span>Status</span><span>Updated</span><span /></div>{projects.map((project) => <div className="project-row" key={project.id}><button className="project-link" onClick={() => openProject(project.id)}><i style={{ backgroundColor: projectIconColor(project.id) }} aria-hidden="true">{project.name?.trim().charAt(0).toUpperCase() || "P"}</i><span><b>{project.name}</b></span></button><span className="status">{project.status.replace("_", " ")}</span><span>{date(project.updated_at)}</span><button className="row-delete" title={`Delete ${project.name}`} onClick={() => remove(project)}>×</button></div>)}</>}</section></section>{showCreate && <Modal title="Create a project" onClose={() => setShowCreate(false)}><form onSubmit={create}><label>Project name<input required maxLength="255" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label><label>What are you building?<textarea required rows="5" value={form.clientIdea} onChange={(e) => setForm({ ...form, clientIdea: e.target.value })} /></label><button className="primary-btn full">Create project →</button></form></Modal>}</Layout>;
 }
 
 function Project({ user, id, navigate, logout }) {
@@ -502,7 +519,7 @@ const saveProfile = async (event) => {
   <h2>Profile</h2>
 
   <div className="profile-photo-section">
-    <div className="profile-photo">
+    <div className="profile-photo" style={{ backgroundImage: profileGradient(user.id ?? user.email ?? profile.name) }}>
       {profilePhoto ? (
         <img src={profilePhoto} alt="Profile" />
       ) : (
@@ -575,5 +592,5 @@ export default function App() {
   if (page === "project" && projectId) return <Project user={session} id={projectId} navigate={navigate} logout={logout} />;
   if (page === "templates") return <Templates user={session} navigate={navigate} logout={logout} />;
   if (page === "settings") return <Settings user={session} setUser={setSession} navigate={navigate} logout={logout} />;
-  return <Dashboard user={session} navigate={navigate} logout={logout} openProject={(id) => navigate("project", id)} />;
+  return <Dashboard user={session} navigate={navigate} logout={logout} openProject={(id) => navigate("project", id)} page={page === "projects" ? "projects" : "dashboard"} />;
 }
