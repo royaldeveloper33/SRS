@@ -20,21 +20,26 @@
        1. GLOBAL DESIGN
        ========================================================= */
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+:root {
+  --text: #19172f;
+  --muted: #77758d;
+  --light-muted: #9693ad;
+  --border: #e5e1f1;
+  --background: #f8f7fc;
+  --white: #ffffff;
 
-    :root {
-      --text: #182329;
-      --muted: #748187;
-      --light-muted: #9aa5a8;
-      --border: #e1e8e6;
-      --background: #f7faf9;
-      --white: #ffffff;
-      --green: #168f70;
-      --green-dark: #0b7358;
-      --green-light: #e5f6f0;
-      --red: #c54c4c;
-      --red-light: #fff4f4;
-    }
+  --green: #302064;
+  --green-dark: #24164f;
+  --green-light: #eeeafd;
 
+  --red: #c54c4c;
+  --red-light: #fff4f4;
+
+  --purple: #302064;
+  --purple-dark: #24164f;
+  --purple-light: #eeeafd;
+  --mist: #f0eefb;
+}
     * {
       box-sizing: border-box;
       margin: 0;
@@ -69,25 +74,25 @@
     /* =========================================================
        3. LEFT BRAND PANEL
        ========================================================= */
-    .brand-panel {
-      position: relative;
-      overflow: hidden;
-      min-height: 100vh;
-      padding: 40px 58px;
-      background: #eef4f2;
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-    }
+   .brand-panel {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  padding: 40px 58px;
+  background: #eae7f8;
+  border-right: 1px solid #ddd8f0;
+  display: flex;
+  flex-direction: column;
+}
 
     /* Decorative circles */
-    .circle {
-      position: absolute;
-      border: 1px solid #d7e6e1;
-      border-radius: 50%;
-      pointer-events: none;
-    }
-
+   .circle {
+  position: absolute;
+  border: 1px solid rgba(115, 96, 180, 0.12);
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.12);
+}
     .circle-one {
       width: 430px;
       height: 430px;
