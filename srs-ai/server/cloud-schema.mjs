@@ -79,6 +79,21 @@ CREATE TABLE IF NOT EXISTS feedback (
   created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS project_requirements (
+  id SERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  code VARCHAR(30) NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  type VARCHAR(30) NOT NULL DEFAULT 'Functional',
+  priority VARCHAR(20) NOT NULL DEFAULT 'Medium',
+  status VARCHAR(20) NOT NULL DEFAULT 'Planned',
+  acceptance_criteria TEXT,
+  source_feature_id INTEGER,
+  created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS projects_user_id_idx ON projects(user_id);
 CREATE INDEX IF NOT EXISTS clarification_questions_project_id_idx ON clarification_questions(project_id);
 CREATE INDEX IF NOT EXISTS srs_documents_project_id_idx ON srs_documents(project_id);
@@ -102,6 +117,7 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS icon VARCHAR(10);
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS project_activities_project_id_idx ON project_activities(project_id);
 CREATE INDEX IF NOT EXISTS feedback_user_id_idx ON feedback(user_id);
+CREATE INDEX IF NOT EXISTS project_requirements_project_id_idx ON project_requirements(project_id);
 `;
 
 try {
