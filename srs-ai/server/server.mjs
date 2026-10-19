@@ -261,13 +261,23 @@ app.post("/api/me/api-key", handle(async (request, response) => {
 }));
 app.post("/api/feedback", handle(async (request, response) => { const message = typeof request.body.message === "string" ? request.body.message.trim() : ""; if (message.length < 5 || message.length > 2000) return response.status(400).json({ error: "Feedback must be between 5 and 2,000 characters" }); await prisma.feedback.create({ data: { user_id: request.user.id, message } }); response.status(201).json({ message: "Thank you for your feedback." }); }));
 
-const projectSelect = { id: true, user_id: true, name: true, client_idea: true, status: true, client_name: true, deadline: true, notes: true, color: true, icon: true, is_favorite: true, created_at: true, updated_at: true };
-const projectActivity = (projectId, action, detail) => prisma.project_activities.create({ data: { project_id: projectId, action, detail } });
+const projectSelect = {
+  id: true,
+  user_id: true,
+  name: true,
+  client_idea: true,
+  status: true,
+  created_at: true,
+  updated_at: true,
+};const projectActivity = (projectId, action, detail) => prisma.project_activities.create({ data: { project_id: projectId, action, detail } });
 app.get("/api/projects", handle(async (request, response) => {
   const search = typeof request.query.search === "string" ? request.query.search.trim() : "";
   const status = typeof request.query.status === "string" && ["draft", "in_progress", "complete", "archived"].includes(request.query.status) ? request.query.status : undefined;
-  const sort = request.query.sort === "name" ? { name: "asc" } : request.query.sort === "deadline" ? { deadline: "asc" } : request.query.sort === "updated" ? { updated_at: "desc" } : { created_at: "desc" };
-  return response.json(await prisma.projects.findMany({ where: { user_id: request.user.id, ...(status ? { status } : {}), ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { client_idea: { contains: search, mode: "insensitive" } }] } : {}) }, orderBy: sort, select: projectSelect }));
+const sort = request.query.sort === "name"
+  ? { name: "asc" }
+  : request.query.sort === "updated"
+    ? { updated_at: "desc" }
+    : { created_at: "desc" };  return response.json(await prisma.projects.findMany({ where: { user_id: request.user.id, ...(status ? { status } : {}), ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { client_idea: { contains: search, mode: "insensitive" } }] } : {}) }, orderBy: sort, select: projectSelect }));
 }));
 app.get("/api/users/:userId/projects", handle(async (request, response) => {
   const userId = parseId(request.params.userId);
