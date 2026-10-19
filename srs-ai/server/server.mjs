@@ -259,12 +259,14 @@ app.post("/api/me/api-key", handle(async (request, response) => {
   await prisma.users.update({ where: { id: request.user.id }, data: { api_key_hash: crypto.createHash("sha256").update(key).digest("hex"), api_key_created_at: new Date() } });
   return response.status(201).json({ key });
 }));
+app.post("/api/feedback", handle(async (request, response) => { const message = typeof request.body.message === "string" ? request.body.message.trim() : ""; if (message.length < 5 || message.length > 2000) return response.status(400).json({ error: "Feedback must be between 5 and 2,000 characters" }); await prisma.feedback.create({ data: { user_id: request.user.id, message } }); response.status(201).json({ message: "Thank you for your feedback." }); }));
 
-const projectSelect = { id: true, user_id: true, name: true, client_idea: true, status: true, created_at: true, updated_at: true };
+const projectSelect = { id: true, user_id: true, name: true, client_idea: true, status: true, client_name: true, deadline: true, notes: true, color: true, icon: true, is_favorite: true, created_at: true, updated_at: true };
+const projectActivity = (projectId, action, detail) => prisma.project_activities.create({ data: { project_id: projectId, action, detail } });
 app.get("/api/projects", handle(async (request, response) => {
   const search = typeof request.query.search === "string" ? request.query.search.trim() : "";
   const status = typeof request.query.status === "string" && ["draft", "in_progress", "complete", "archived"].includes(request.query.status) ? request.query.status : undefined;
-  const sort = request.query.sort === "name" ? { name: "asc" } : request.query.sort === "updated" ? { updated_at: "desc" } : { created_at: "desc" };
+  const sort = request.query.sort === "name" ? { name: "asc" } : request.query.sort === "deadline" ? { deadline: "asc" } : request.query.sort === "updated" ? { updated_at: "desc" } : { created_at: "desc" };
   return response.json(await prisma.projects.findMany({ where: { user_id: request.user.id, ...(status ? { status } : {}), ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { client_idea: { contains: search, mode: "insensitive" } }] } : {}) }, orderBy: sort, select: projectSelect }));
 }));
 app.get("/api/users/:userId/projects", handle(async (request, response) => {
@@ -273,25 +275,38 @@ app.get("/api/users/:userId/projects", handle(async (request, response) => {
   return response.json(await prisma.projects.findMany({ where: { user_id: userId }, orderBy: { updated_at: "desc" }, select: projectSelect }));
 }));
 app.post("/api/projects", handle(async (request, response) => {
-  const { name, clientIdea, template, status } = request.body;
+  const { name, clientIdea, template, status, client_name, deadline, notes, color, icon } = request.body;
   if (typeof name !== "string" || !name.trim() || name.trim().length > 255 || typeof clientIdea !== "string" || !clientIdea.trim()) return response.status(400).json({ error: "Project name and software idea are required" });
-  const project = await prisma.projects.create({ data: { user_id: request.user.id, name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : "draft" }, select: projectSelect });
+  const project = await prisma.projects.create({ data: { user_id: request.user.id, name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : "draft", client_name: typeof client_name === "string" ? client_name.trim().slice(0, 150) || null : null, deadline: typeof deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(deadline) ? new Date(`${deadline}T00:00:00.000Z`) : null, notes: typeof notes === "string" ? notes.trim() || null : null, color: typeof color === "string" ? color.slice(0, 20) : null, icon: typeof icon === "string" ? icon.slice(0, 10) : null }, select: projectSelect });
+  await projectActivity(project.id, "created", "Project created");
+  await prisma.clarification_questions.createMany({ data: [
+    { project_id: project.id, question: "Who are the main users of this system?", answer_type: "multiple_choice", choices: ["Customers", "Internal team", "Administrators", "All of these"] },
+    { project_id: project.id, question: "Does the application need login and role-based access?", answer_type: "yes_no", choices: ["Yes", "No"] },
+    { project_id: project.id, question: "What is the most important outcome for the first release?", answer_type: "text" },
+    { project_id: project.id, question: "Will this project handle personal, payment, or other sensitive data?", answer_type: "yes_no", choices: ["Yes", "No"] }
+  ] });
+  await projectActivity(project.id, "questions_created", "Starter discovery questions added");
   if (template && typeof template === "object" && typeof template.content === "string") await prisma.srs_documents.create({ data: { project_id: project.id, title: template.title || "Software Requirements Specification", content: { text: template.content }, version: 1 } });
   return response.status(201).json(project);
 }));
 app.get("/api/projects/:projectId", handle(async (request, response) => {
   const projectId = parseId(request.params.projectId);
   if (!projectId) return response.status(400).json({ error: "Invalid project id" });
-  const project = await prisma.projects.findFirst({ where: { id: projectId, user_id: request.user.id }, select: { ...projectSelect, clarification_questions: { select: { id: true, question: true, answer: true, answer_type: true, choices: true, selected_choices: true, created_at: true }, orderBy: { created_at: "asc" } }, srs_documents: { select: { id: true, title: true, content: true, version: true, created_at: true, updated_at: true }, orderBy: { version: "desc" } } } });
+  const project = await prisma.projects.findFirst({ where: { id: projectId, user_id: request.user.id }, select: { ...projectSelect, clarification_questions: { select: { id: true, question: true, answer: true, answer_type: true, choices: true, selected_choices: true, created_at: true }, orderBy: { created_at: "asc" } }, project_requirements: { select: { id: true, code: true, title: true, description: true, type: true, priority: true, status: true, acceptance_criteria: true, created_at: true, updated_at: true }, orderBy: { created_at: "asc" } }, srs_documents: { select: { id: true, title: true, content: true, version: true, created_at: true, updated_at: true }, orderBy: { version: "desc" } } } });
   return project ? response.json(project) : response.status(404).json({ error: "Project not found" });
 }));
 app.patch("/api/projects/:projectId", handle(async (request, response) => {
   const projectId = parseId(request.params.projectId);
   if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" });
-  const { name, clientIdea, status } = request.body;
+  const { name, clientIdea, status, client_name, deadline, notes, color, icon, is_favorite } = request.body;
   if (typeof name !== "string" || !name.trim() || typeof clientIdea !== "string" || !clientIdea.trim()) return response.status(400).json({ error: "Project name and software idea are required" });
-  return response.json(await prisma.projects.update({ where: { id: projectId }, data: { name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : undefined, updated_at: new Date() }, select: projectSelect }));
+  const project = await prisma.projects.update({ where: { id: projectId }, data: { name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : undefined, client_name: typeof client_name === "string" ? client_name.trim().slice(0, 150) || null : undefined, deadline: typeof deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(deadline) ? new Date(`${deadline}T00:00:00.000Z`) : deadline === null ? null : undefined, notes: typeof notes === "string" ? notes.trim() || null : undefined, color: typeof color === "string" ? color.slice(0, 20) : undefined, icon: typeof icon === "string" ? icon.slice(0, 10) : undefined, is_favorite: typeof is_favorite === "boolean" ? is_favorite : undefined, updated_at: new Date() }, select: projectSelect });
+  await projectActivity(projectId, "updated", "Project details updated");
+  return response.json(project);
 }));
+app.post("/api/projects/:projectId/archive", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); const project = await prisma.projects.update({ where: { id: projectId }, data: { status: "archived", updated_at: new Date() }, select: projectSelect }); await projectActivity(projectId, "archived", "Project archived"); response.json(project); }));
+app.post("/api/projects/:projectId/favorite", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); const current = await prisma.projects.findUniqueOrThrow({ where: { id: projectId }, select: { is_favorite: true } }); const project = await prisma.projects.update({ where: { id: projectId }, data: { is_favorite: !current.is_favorite, updated_at: new Date() }, select: projectSelect }); await projectActivity(projectId, project.is_favorite ? "favorited" : "unfavorited", project.is_favorite ? "Project pinned as favorite" : "Project removed from favorites"); response.json(project); }));
+app.get("/api/projects/:projectId/activity", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); response.json(await prisma.project_activities.findMany({ where: { project_id: projectId }, orderBy: { created_at: "desc" }, take: 15 })); }));
 app.post("/api/projects/:projectId/duplicate", handle(async (request, response) => {
   const projectId = parseId(request.params.projectId);
   const source = projectId && await prisma.projects.findFirst({ where: { id: projectId, user_id: request.user.id }, include: { clarification_questions: true, srs_documents: { orderBy: { version: "desc" }, take: 1 } } });
@@ -299,6 +314,10 @@ app.post("/api/projects/:projectId/duplicate", handle(async (request, response) 
   const duplicate = await prisma.$transaction(async (tx) => { const copy = await tx.projects.create({ data: { user_id: request.user.id, name: `${source.name} (Copy)`, client_idea: source.client_idea, status: "draft" } }); if (source.clarification_questions.length) await tx.clarification_questions.createMany({ data: source.clarification_questions.map(({ question }) => ({ project_id: copy.id, question })) }); const doc = source.srs_documents[0]; if (doc) await tx.srs_documents.create({ data: { project_id: copy.id, title: doc.title, content: doc.content || {}, version: 1 } }); return copy; });
   return response.status(201).json(duplicate);
 }));
+app.get("/api/projects/:projectId/requirements", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); response.json(await prisma.project_requirements.findMany({ where: { project_id: projectId }, orderBy: { created_at: "asc" } })); }));
+app.post("/api/projects/:projectId/requirements", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); const { title, description, type, priority, status, acceptance_criteria } = request.body; if (typeof title !== "string" || !title.trim()) return response.status(400).json({ error: "Requirement title is required" }); const count = await prisma.project_requirements.count({ where: { project_id: projectId, type: type === "Non-functional" ? "Non-functional" : "Functional" } }); const requirementType = type === "Non-functional" ? "Non-functional" : "Functional"; const code = `${requirementType === "Non-functional" ? "NFR" : "FR"}-${String(count + 1).padStart(3, "0")}`; const requirement = await prisma.project_requirements.create({ data: { project_id: projectId, code, title: title.trim(), description: typeof description === "string" ? description.trim() || null : null, type: requirementType, priority: ["Low", "Medium", "High", "Critical"].includes(priority) ? priority : "Medium", status: ["Planned", "In progress", "Completed"].includes(status) ? status : "Planned", acceptance_criteria: typeof acceptance_criteria === "string" ? acceptance_criteria.trim() || null : null } }); await projectActivity(projectId, "requirement_added", `Added ${requirement.code}: ${requirement.title}`); response.status(201).json(requirement); }));
+app.patch("/api/requirements/:requirementId", handle(async (request, response) => { const requirementId = parseId(request.params.requirementId); const existing = requirementId && await prisma.project_requirements.findUnique({ where: { id: requirementId } }); if (!existing || !(await ownedProject(request.user.id, existing.project_id))) return response.status(404).json({ error: "Requirement not found" }); const { title, description, priority, status, acceptance_criteria } = request.body; const requirement = await prisma.project_requirements.update({ where: { id: requirementId }, data: { title: typeof title === "string" && title.trim() ? title.trim() : undefined, description: typeof description === "string" ? description.trim() || null : undefined, priority: ["Low", "Medium", "High", "Critical"].includes(priority) ? priority : undefined, status: ["Planned", "In progress", "Completed"].includes(status) ? status : undefined, acceptance_criteria: typeof acceptance_criteria === "string" ? acceptance_criteria.trim() || null : undefined, updated_at: new Date() } }); await projectActivity(existing.project_id, "requirement_updated", `Updated ${requirement.code}`); response.json(requirement); }));
+app.delete("/api/requirements/:requirementId", handle(async (request, response) => { const requirementId = parseId(request.params.requirementId); const existing = requirementId && await prisma.project_requirements.findUnique({ where: { id: requirementId } }); if (!existing || !(await ownedProject(request.user.id, existing.project_id))) return response.status(404).json({ error: "Requirement not found" }); await prisma.project_requirements.delete({ where: { id: requirementId } }); await projectActivity(existing.project_id, "requirement_deleted", `Removed ${existing.code}`); response.status(204).end(); }));
 app.delete("/api/projects/:projectId", handle(async (request, response) => {
   const projectId = parseId(request.params.projectId);
   if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" });
@@ -335,8 +354,397 @@ app.get("/api/documents/:documentId/export", handle(async (request, response) =>
   const documentId = parseId(request.params.documentId); const format = String(request.query.format || "").toLowerCase(); if (!documentId || !["pdf", "docx"].includes(format)) return response.status(400).json({ error: "documentId and format (pdf or docx) are required" });
   const document = await prisma.srs_documents.findUnique({ where: { id: documentId }, include: { projects: true } }); if (!document || document.projects.user_id !== request.user.id) return response.status(404).json({ error: "SRS document not found" });
   const text = typeof document.content?.text === "string" ? document.content.text : "No SRS content available."; const filename = `${document.projects.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "srs"}-srs.${format}`; await prisma.document_exports.create({ data: { project_id: document.project_id, format, storage_url: `generated://${filename}` } }); response.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  if (format === "pdf") { response.setHeader("Content-Type", "application/pdf"); const pdf = new PDFDocument({ margin: 54, info: { Title: document.title, Author: "SRS AI" } }); pdf.pipe(response); pdf.rect(0, 0, pdf.page.width, 94).fill("#192329"); pdf.fillColor("#ffffff").fontSize(10).text("SRS AI  /  SOFTWARE REQUIREMENTS", 54, 27); pdf.fontSize(21).font("Helvetica-Bold").text(document.title, 54, 47); pdf.fillColor("#66757a").font("Helvetica").fontSize(9).text(`Project: ${document.projects.name}  |  Version ${document.version || 1}  |  ${new Date().toLocaleDateString()}`, 54, 112); pdf.moveDown(2); for (const line of text.split(/\r?\n/)) { if (/^#{1,3}\s+/.test(line)) { pdf.moveDown(.7).fillColor("#087859").font("Helvetica-Bold").fontSize(line.startsWith("# ") ? 16 : 13).text(line.replace(/^#+\s*/, "")); } else if (line.trim()) { pdf.fillColor("#27353a").font("Helvetica").fontSize(10).text(line.replace(/^[-*]\s*/, "• "), { lineGap: 4 }); } else pdf.moveDown(.45); } pdf.fillColor("#8a9699").fontSize(8).text("Generated by SRS AI", 54, pdf.page.height - 45); return pdf.end(); }
-  const paragraphs = text.split(/\r?\n/).map((line) => /^#{1,3}\s+/.test(line) ? new Paragraph({ text: line.replace(/^#+\s*/, ""), heading: line.startsWith("# ") ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2 }) : new Paragraph({ children: [new TextRun({ text: line || " ", size: 21 })] })); const word = new Document({ sections: [{ children: [new Paragraph({ text: document.title, heading: HeadingLevel.TITLE }), new Paragraph({ children: [new TextRun({ text: `Project: ${document.projects.name} | Version ${document.version || 1}`, color: "087859", bold: true, size: 20 })] }), new Paragraph(" "), ...paragraphs] }] }); return response.type("application/vnd.openxmlformats-officedocument.wordprocessingml.document").send(await Packer.toBuffer(word));
+if (format === "pdf") {
+  response.setHeader("Content-Type", "application/pdf");
+
+  const pdf = new PDFDocument({
+  size: "A4",
+  margins: {
+    top: 68,
+    bottom: 62,
+    left: 54,
+    right: 54
+  },
+  bufferPages: true,
+  autoFirstPage: true,
+  info: {
+    Title: document.title,
+    Author: "SRS AI",
+    Subject: "Software Requirements Specification"
+  }
+});
+
+  pdf.pipe(response);
+
+  const NAVY = "#17142F";
+const PURPLE = "#39256F";
+const LIGHT_PURPLE = "#EEEAFB";
+const TEXT = "#28263D";
+const MUTED = "#77758D";
+const BORDER = "#DED7EB";
+
+const ACCENT = "#8B5CF6";
+const WHITE = "#FFFFFF";
+const SOFT_BACKGROUND = "#F8F7FC";
+const CARD_BACKGROUND = "#F1EDFA";
+
+  const pageWidth = pdf.page.width;
+  const pageHeight = pdf.page.height;
+  const left = 54;
+  const right = pageWidth - 54;
+  const width = right - left;
+
+  const projectName = document.projects.name || "SRS Project";
+  const version = document.version || 1;
+  const date = new Date().toLocaleDateString("en-GB");
+
+  // Basic Markdown cleanup for headings, bold text and lists.
+  function cleanMarkdown(value = "") {
+    return String(value)
+      .replace(/\r/g, "")
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/__(.*?)__/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/_(.*?)_/g, "$1")
+      .replace(/~~(.*?)~~/g, "$1")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/^\s*[-*+]\s+/gm, "• ")
+      .replace(/^\s*\d+\.\s+/gm, "• ")
+      .replace(/^---+\s*$/gm, "");
+  }
+
+  const lines = String(text || "")
+    .replace(/\r/g, "")
+    .split("\n");
+
+  const sections = [];
+  let currentSection = { title: "Introduction", lines: [] };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (/^#\s+/.test(line)) {
+      if (
+        currentSection.lines.length ||
+        currentSection.title !== "Introduction"
+      ) {
+        sections.push(currentSection);
+      }
+
+      currentSection = {
+        title: cleanMarkdown(line.replace(/^#\s+/, "")),
+        lines: []
+      };
+    } else {
+      currentSection.lines.push(rawLine);
+    }
+  }
+
+  if (currentSection.lines.length || sections.length === 0) {
+    sections.push(currentSection);
+  }
+
+  // COVER PAGE
+  pdf.rect(0, 0, pageWidth, pageHeight).fill(NAVY);
+
+  pdf.circle(pageWidth - 45, 90, 160).fill("#30245C");
+  pdf.circle(35, pageHeight - 50, 170).fill("#241A49");
+
+  pdf.roundedRect(left, 55, 44, 44, 10).fill(LIGHT_PURPLE);
+  pdf.fillColor(PURPLE).font("Helvetica-Bold").fontSize(23)
+    .text("S", left, 64, { width: 44, align: "center" });
+
+  pdf.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(19)
+    .text("SRS AI", left + 58, 57);
+
+  pdf.fillColor("#CFC6EB").font("Helvetica").fontSize(9)
+    .text("SOFTWARE REQUIREMENTS DOCUMENTATION", left + 58, 82);
+
+  pdf.fillColor("#C6B5FF").font("Helvetica-Bold").fontSize(10)
+    .text("SOFTWARE DOCUMENTATION", left, 220);
+
+  pdf.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(30)
+    .text("Software Requirements", left, 255, {
+      width,
+      lineGap: 7
+    });
+
+  pdf.fillColor("#C6B5FF").font("Helvetica-Bold").fontSize(30)
+    .text("Specification (SRS)", left, 300, {
+      width,
+      lineGap: 7
+    });
+
+  pdf.fillColor("#DDD8EF").font("Helvetica").fontSize(12)
+    .text(projectName, left, 365, { width });
+
+  pdf.moveTo(left, 430).lineTo(right, 430)
+    .strokeColor("#65558D").lineWidth(1).stroke();
+
+  const metadata = [
+    ["PROJECT", projectName],
+    ["DOCUMENT VERSION", `Version ${version}`],
+    ["GENERATED", date]
+  ];
+
+  let metaY = 455;
+
+  for (const [label, value] of metadata) {
+    pdf.fillColor("#BDB1DF").font("Helvetica-Bold").fontSize(8)
+      .text(label, left, metaY);
+
+    pdf.fillColor("#FFFFFF").font("Helvetica").fontSize(11)
+      .text(value, left, metaY + 15, { width });
+
+    metaY += 48;
+  }
+
+  pdf.fillColor("#CFC6EB").font("Helvetica").fontSize(8)
+    .text("SRS AI  •  SOFTWARE REQUIREMENTS", left, pageHeight - 55);
+
+  // TABLE OF CONTENTS
+  pdf.addPage({ size: "A4", margins: { top: 58, bottom: 55, left: 54, right: 54 } });
+
+  pdf.fillColor(PURPLE).font("Helvetica-Bold").fontSize(10)
+    .text("SRS AI  /  DOCUMENTATION", left, 35);
+
+  pdf.fillColor(NAVY).font("Helvetica-Bold").fontSize(25)
+    .text("Table of Contents", left, 78);
+
+  pdf.fillColor(MUTED).font("Helvetica").fontSize(10)
+    .text("Document structure and sections", left, 115);
+
+  let tocY = 160;
+  const tocItems = [];
+
+  sections.forEach((section, index) => {
+    const title = section.title || `Section ${index + 1}`;
+
+    if (tocY > pageHeight - 85) {
+      pdf.addPage();
+      tocY = 65;
+    }
+
+    pdf.circle(left + 13, tocY + 10, 12).fill(PURPLE);
+
+    pdf.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(9)
+      .text(String(index + 1), left + 5, tocY + 5, {
+        width: 16,
+        align: "center"
+      });
+
+    pdf.fillColor(NAVY).font("Helvetica-Bold").fontSize(10)
+      .text(title, left + 38, tocY + 4, {
+        width: width - 45,
+        ellipsis: true
+      });
+
+    const titleWidth = pdf.widthOfString(title);
+    const dotsStart = Math.min(left + 40 + titleWidth, right - 100);
+
+    pdf.save();
+    pdf.strokeColor(BORDER).lineWidth(0.5);
+    for (let x = dotsStart; x < right - 55; x += 5) {
+      pdf.circle(x, tocY + 12, 0.7).fill(BORDER);
+    }
+    pdf.restore();
+
+    tocItems.push({
+  index,
+  title,
+  page: null,
+  tocPage: pdf.bufferedPageRange().start +
+    pdf.bufferedPageRange().count - 1,
+  tocY
+});
+
+    tocY += 35;
+  });
+
+ // CONTENT PAGES
+
+for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+
+  const section = sections[sectionIndex];
+
+  // Record the physical page number where this section begins.
+  const pageRangeBefore = pdf.bufferedPageRange();
+  tocItems[sectionIndex].page =
+    pageRangeBefore.start + pageRangeBefore.count + 1;
+
+  pdf.addPage({
+      size: "A4",
+      margins: { top: 68, bottom: 58, left: 54, right: 54 }
+    });
+
+   let y = 65;
+
+pdf.rect(0, 0, pageWidth, pageHeight)
+  .fill(SOFT_BACKGROUND);
+
+pdf.rect(0, 0, pageWidth, 7)
+  .fill(PURPLE);
+
+  function ensureSpace(height = 35) {
+  if (y + height > pageHeight - 60) {
+    pdf.addPage();
+    pdf.rect(0, 0, pageWidth, pageHeight)
+      .fill(SOFT_BACKGROUND);
+
+    pdf.rect(0, 0, pageWidth, 7)
+      .fill(PURPLE);
+
+    y = 65;
+
+    pdf.fillColor(PURPLE)
+      .font("Helvetica-Bold")
+      .fontSize(9)
+      .text("SRS AI  /  SOFTWARE REQUIREMENTS", left, 35);
+  }
+}
+
+    pdf.fillColor(PURPLE).font("Helvetica-Bold").fontSize(9)
+      .text("SRS AI  /  SOFTWARE REQUIREMENTS", left, 35);
+
+    pdf.circle(left + 15, y + 12, 14).fill(PURPLE);
+
+    pdf.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(10)
+      .text(String(sectionIndex + 1), left + 7, y + 7, {
+        width: 16,
+        align: "center"
+      });
+
+    pdf.fillColor(NAVY).font("Helvetica-Bold").fontSize(19)
+      .text(section.title || `Section ${sectionIndex + 1}`, left + 40, y + 2, {
+        width: width - 40
+      });
+
+    y += 48;
+
+    for (const rawLine of section.lines) {
+      const trimmed = rawLine.trim();
+
+      if (!trimmed || /^---+$/.test(trimmed)) {
+        y += 7;
+        continue;
+      }
+
+      if (/^#{2,6}\s+/.test(trimmed)) {
+        const heading = cleanMarkdown(trimmed);
+
+        ensureSpace(48);
+
+       pdf.fillColor(PURPLE)
+  .font("Helvetica-Bold")
+  .fontSize(14)
+  .text(heading, left, y, {
+    width,
+    lineGap: 4
+  });
+
+y = pdf.y + 10;
+        continue;
+      }
+
+      if (/^>\s?/.test(trimmed)) {
+        const quote = cleanMarkdown(trimmed.replace(/^>\s?/, ""));
+
+        const quoteHeight = pdf.heightOfString(quote, {
+          width: width - 30,
+          font: "Helvetica",
+          fontSize: 10
+        }) + 18;
+
+        ensureSpace(quoteHeight + 8);
+
+        pdf.roundedRect(left, y, width, quoteHeight, 5)
+          .fill(LIGHT_PURPLE);
+
+        pdf.rect(left, y, 4, quoteHeight).fill(PURPLE);
+
+        pdf.fillColor(TEXT).font("Helvetica").fontSize(10)
+          .text(quote, left + 15, y + 9, {
+            width: width - 30,
+            lineGap: 3
+          });
+
+        y += quoteHeight + 10;
+        continue;
+      }
+
+      const bullet = /^\s*([-*+]|\d+\.)\s+/.test(trimmed);
+      const paragraph = cleanMarkdown(trimmed);
+
+      const fontSize = 10;
+      const paragraphX = bullet ? left + 18 : left;
+      const paragraphWidth = bullet ? width - 18 : width;
+
+      const paragraphHeight = pdf.heightOfString(paragraph, {
+        width: paragraphWidth,
+        font: "Helvetica",
+        fontSize,
+        lineGap: 3
+      });
+
+      ensureSpace(paragraphHeight + 12);
+
+      if (bullet) {
+        pdf.circle(left + 5, y + 6, 2).fill(PURPLE);
+      }
+
+      pdf.fillColor(TEXT).font("Helvetica").fontSize(fontSize)
+        .text(paragraph, paragraphX, y, {
+          width: paragraphWidth,
+          lineGap: 3
+        });
+
+      y = pdf.y + 9;
+    }
+  }
+// Fill in the actual starting page numbers in the Table of Contents.
+for (const item of tocItems) {
+  if (item.page === null) continue;
+
+  pdf.switchToPage(item.tocPage);
+
+  pdf.fillColor(SOFT_BACKGROUND)
+    .rect(right - 42, item.tocY + 1, 35, 20)
+    .fill();
+
+  pdf.fillColor(PURPLE)
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text(String(item.page), right - 42, item.tocY + 5, {
+      width: 30,
+      align: "right"
+    });
+}
+
+// Return to the last page before adding footers.
+pdf.switchToPage(pdf.bufferedPageRange().count - 1);
+  // Add consistent footers and page numbers to every page except the cover.
+  const pageRange = pdf.bufferedPageRange();
+
+  for (let i = 1; i < pageRange.count; i++) {
+    pdf.switchToPage(i);
+
+    pdf.moveTo(left, pageHeight - 42)
+      .lineTo(right, pageHeight - 42)
+      .strokeColor(BORDER).lineWidth(0.5).stroke();
+
+    pdf.fillColor(MUTED).font("Helvetica").fontSize(8)
+      .text("SRS AI  •  SOFTWARE REQUIREMENTS", left, pageHeight - 30);
+
+    pdf.fillColor(PURPLE).font("Helvetica-Bold").fontSize(8)
+      .text(`Page ${i + 1} of ${pageRange.count}`, left, pageHeight - 30, {
+        width,
+        align: "right"
+      });
+  }
+
+  return pdf.end();
+}  const paragraphs = text.split(/\r?\n/).map((line) => /^#{1,3}\s+/.test(line) ? new Paragraph({ text: line.replace(/^#+\s*/, ""), heading: line.startsWith("# ") ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2 }) : new Paragraph({ children: [new TextRun({ text: line || " ", size: 21 })] })); const word = new Document({ sections: [{ children: [new Paragraph({ text: document.title, heading: HeadingLevel.TITLE }), new Paragraph({ children: [new TextRun({ text: `Project: ${document.projects.name} | Version ${document.version || 1}`, color: "087859", bold: true, size: 20 })] }), new Paragraph(" "), ...paragraphs] }] }); return response.type("application/vnd.openxmlformats-officedocument.wordprocessingml.document").send(await Packer.toBuffer(word));
 }));
 
 app.use("/api", (_request, response) => response.status(404).json({ error: "API route not found" }));
