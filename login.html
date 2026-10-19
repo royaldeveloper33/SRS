@@ -664,6 +664,239 @@
         gap: 12px;
       }
     }
+    /* =========================================================
+   SRS AI — LIGHT LAVENDER LOGIN REDESIGN
+   Visual changes only; preserve existing functionality.
+   ========================================================= */
+
+body {
+  background: #f8f7fc;
+  color: #19172f;
+}
+
+.auth-page {
+  min-height: 100vh;
+  grid-template-columns: 1fr 1.04fr;
+}
+
+/* LEFT BRAND PANEL */
+.brand-panel {
+  background: #eae7f8;
+  border-right: 1px solid #ddd8f0;
+  padding: 40px 48px;
+}
+
+.circle {
+  border: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.28),
+    rgba(185, 171, 231, 0.12)
+  );
+}
+
+.circle-one {
+  width: 430px;
+  height: 430px;
+  right: -200px;
+  top: -230px;
+}
+
+.circle-two {
+  width: 440px;
+  height: 440px;
+  left: auto;
+  right: -240px;
+  bottom: -310px;
+}
+
+.brand-mark {
+  background: #19172f;
+  color: #fff;
+}
+
+.brand-ai {
+  color: #302064;
+}
+
+.eyebrow {
+  border-color: transparent;
+  background: transparent;
+  padding-left: 0;
+  color: #302064;
+}
+
+.brand-content h1 {
+  color: #19172f;
+  font-size: clamp(34px, 3.2vw, 46px);
+  line-height: 1.08;
+  letter-spacing: -1.8px;
+}
+
+.brand-content > p {
+  color: #626078;
+  max-width: 390px;
+}
+
+.benefit {
+  color: #19172f;
+  gap: 12px;
+}
+
+.benefit-icon {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: #302064;
+  color: #fff;
+}
+
+.brand-footer {
+  color: #77758d;
+}
+
+/* RIGHT LOGIN PANEL */
+.form-panel {
+  background: #f8f7fc;
+  padding: 32px 42px;
+}
+
+.auth-container {
+  width: min(420px, 100%);
+}
+
+/* Hide the login/register tabs to match the reference.
+   The register link and showRegister() still work. */
+.auth-tabs {
+  display: none;
+}
+
+.auth-heading {
+  margin-bottom: 26px;
+}
+
+.auth-heading h2 {
+  color: #19172f;
+  font-size: 28px;
+  letter-spacing: -1px;
+}
+
+.auth-heading p {
+  color: #77758d;
+  font-size: 12px;
+}
+
+/* INPUTS */
+.field label {
+  color: #302064;
+  font-size: 11px;
+}
+
+.input-wrapper input {
+  height: 43px;
+  border-color: #e1def0;
+  border-radius: 6px;
+  background: #e8edfa;
+  color: #19172f;
+  font-size: 12px;
+}
+
+.input-wrapper input:focus {
+  border-color: #7862c4;
+  box-shadow: 0 0 0 3px rgba(120, 98, 196, 0.12);
+}
+
+/* PRIMARY BUTTON */
+.primary-button {
+  background: #302064;
+  color: #fff;
+  border-radius: 6px;
+  box-shadow: none;
+  height: 44px;
+  font-size: 12px;
+}
+
+.primary-button:hover {
+  background: #24164f;
+  transform: translateY(-1px);
+}
+
+/* GOOGLE BUTTON */
+.google-button {
+  height: 43px;
+  background: #fff;
+  border-color: #e1def0;
+  color: #302064;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.google-button:hover {
+  background: #fdfcff;
+  border-color: #c9c0e8;
+}
+
+/* DIVIDER */
+.divider {
+  color: #77758d;
+}
+
+.divider::before,
+.divider::after {
+  background: #e1def0;
+}
+
+/* LINKS */
+.forgot-button,
+.switch-text button {
+  color: #302064;
+}
+
+.remember input {
+  accent-color: #302064;
+}
+
+/* RESPONSIVE */
+@media (max-width: 850px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-panel {
+    min-height: auto;
+    padding: 27px 25px;
+  }
+
+  .brand-content {
+    margin: 0;
+    padding: 38px 0 28px;
+  }
+
+  .form-panel {
+    min-height: auto;
+    padding: 35px 25px;
+  }
+
+  .circle-one {
+    right: -180px;
+    top: -250px;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand-panel {
+    padding: 22px 18px;
+  }
+
+  .brand-content h1 {
+    font-size: 32px;
+  }
+
+  .form-panel {
+    padding: 30px 18px;
+  }
+}
   </style>
 </head>
 
