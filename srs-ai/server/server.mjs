@@ -269,7 +269,6 @@ const projectSelect = {
   status: true,
   created_at: true,
   updated_at: true,
-<<<<<<< HEAD
 };const projectActivity = (projectId, action, detail) => prisma.project_activities.create({ data: { project_id: projectId, action, detail } });
 app.get("/api/projects", handle(async (request, response) => {
   const search = typeof request.query.search === "string" ? request.query.search.trim() : "";
@@ -279,27 +278,6 @@ const sort = request.query.sort === "name"
   : request.query.sort === "updated"
     ? { updated_at: "desc" }
     : { created_at: "desc" };  return response.json(await prisma.projects.findMany({ where: { user_id: request.user.id, ...(status ? { status } : {}), ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { client_idea: { contains: search, mode: "insensitive" } }] } : {}) }, orderBy: sort, select: projectSelect }));
-=======
-};
-const projectActivity = (projectId, action, detail) => prisma.project_activities.create({ data: { project_id: projectId, action, detail } });
-app.get("/api/projects", handle(async (request, response) => {
-  const search = typeof request.query.search === "string" ? request.query.search.trim() : "";
-  const status = typeof request.query.status === "string" && ["draft", "in_progress", "complete", "archived"].includes(request.query.status) ? request.query.status : undefined;
-  const allowedSortFields = [
-  "name",
-  "created_at",
-  "updated_at",
-  "status",
-  "progress"
-];
-
-const requestedSort = request.query.sort;
-
-const sort = allowedSortFields.includes(requestedSort)
-  ? { [requestedSort]: "asc" }
-  : { created_at: "desc" };
-  return response.json(await prisma.projects.findMany({ where: { user_id: request.user.id, ...(status ? { status } : {}), ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { client_idea: { contains: search, mode: "insensitive" } }] } : {}) }, orderBy: sort, select: projectSelect }));
->>>>>>> 2ef5ad7bdd63dec7aac632e14190c4e109350a8a
 }));
 app.get("/api/users/:userId/projects", handle(async (request, response) => {
   const userId = parseId(request.params.userId);
