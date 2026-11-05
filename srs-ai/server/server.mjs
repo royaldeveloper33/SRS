@@ -121,7 +121,7 @@ const sendOtpEmail = async (email, code) => {
   if (!sent.ok) { const detail = await sent.json().catch(() => ({})); const error = new Error(detail.message || "Unable to send verification email"); error.statusCode = 502; throw error; }
 };
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "5mb" }));
 app.use(express.static(path.join(currentDirectory, "public")));
 
 app.post("/api/auth/register", handle(async (request, response) => {

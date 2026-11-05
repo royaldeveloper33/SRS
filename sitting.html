@@ -311,7 +311,16 @@ client - npm run dev<!DOCTYPE html>
       font-weight:700;
       margin-top:8px
     }
+    .profile-picture-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
 
+#removePictureBtn {
+  color: var(--danger);
+}
     .form-grid{
       display:grid;
       grid-template-columns:1fr 1fr;
@@ -752,10 +761,16 @@ client - npm run dev<!DOCTYPE html>
             <!-- // Hidden file input for profile picture -->
             <input id="imageUpload" type="file" accept="image/*" hidden onchange="uploadProfile(event)">
 
-            <button class="upload-btn" onclick="document.getElementById('imageUpload').click()">
-              Change picture
-            </button>
-          </div>
+            <div class="profile-picture-actions">
+  <button class="upload-btn" onclick="document.getElementById('imageUpload').click()">
+    Change picture
+  </button>
+
+<button class="upload-btn" id="removePictureBtn" onclick="removeProfilePicture()" style="display:block">
+      Remove picture
+  </button>
+</div>
+
 
           <div class="form-grid">
 
@@ -1128,37 +1143,77 @@ if(savedTheme){
   setTheme(savedTheme);
 }
 
-/* // =========================
-   // PROFILE PICTURE
-   // ========================= */
-function uploadProfile(event){
-  const file=event.target.files[0];
+/* =========================
+   PROFILE PICTURE
+   ========================= */
 
-  if(!file)return;
+function uploadProfile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
 
-  const reader=new FileReader();
+  const reader = new FileReader();
 
-  reader.onload=function(e){
-    const image=document.getElementById("profileImage");
-    image.src=e.target.result;
-    image.style.display="block";
-    document.getElementById("avatarText").style.display="none";
+  reader.onload = function (e) {
+    const image = document.getElementById("profileImage");
 
-    localStorage.setItem("profileImage",e.target.result);
+    image.src = e.target.result;
+    image.style.display = "block";
+    document.getElementById("avatarText").style.display = "none";
+
+    localStorage.setItem("profileImage", e.target.result);
+
+    const removeButton = document.getElementById("removePictureBtn");
+
+    if (removeButton) {
+      removeButton.style.display = "block";
+    }
+
     showToast("Profile picture updated");
   };
 
   reader.readAsDataURL(file);
 }
 
-/* // Restore profile picture */
-const savedImage=localStorage.getItem("profileImage");
-if(savedImage){
-  document.getElementById("profileImage").src=savedImage;
-  document.getElementById("profileImage").style.display="block";
-  document.getElementById("avatarText").style.display="none";
+function removeProfilePicture() {
+  const confirmed = confirm(
+    "Are you sure you want to remove your profile picture?"
+  );
+
+  if (!confirmed) return;
+
+  const image = document.getElementById("profileImage");
+  const avatarText = document.getElementById("avatarText");
+  const removeButton = document.getElementById("removePictureBtn");
+
+  image.removeAttribute("src");
+  image.style.display = "none";
+  avatarText.style.display = "block";
+
+  localStorage.removeItem("profileImage");
+  document.getElementById("imageUpload").value = "";
+
+  if (removeButton) {
+    removeButton.style.display = "none";
+  }
+
+  showToast("Profile picture removed");
 }
 
+/* Restore profile picture */
+
+const savedImage = localStorage.getItem("profileImage");
+
+if (savedImage) {
+  document.getElementById("profileImage").src = savedImage;
+  document.getElementById("profileImage").style.display = "block";
+  document.getElementById("avatarText").style.display = "none";
+
+  const removeButton = document.getElementById("removePictureBtn");
+
+  if (removeButton) {
+    removeButton.style.display = "block";
+  }
+}
 /* // =========================
    // SAVE SETTINGS
    // ========================= */

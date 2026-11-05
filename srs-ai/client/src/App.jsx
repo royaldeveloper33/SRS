@@ -275,10 +275,80 @@ function WorkspaceSettingsPanel() {
   const [saved, setSaved] = useState(false);
   const [preferences, setPreferences] = useState(() => JSON.parse(localStorage.getItem("srs-workspace-preferences") || '{"projectType":"Web application","reminders":true,"compact":false}'));
   const save = (event) => { event.preventDefault(); localStorage.setItem("srs-workspace-preferences", JSON.stringify(preferences)); setSaved(true); window.setTimeout(() => setSaved(false), 2500); };
-  return <section className="content workspace-settings"><section className="panel padded"><div className="section-head"><div><small>WORKSPACE PREFERENCES</small><h2>Make SRS AI work your way</h2><p>These options are saved on this device and used when you plan new projects.</p></div></div><form onSubmit={save} className="settings-options"><label>Default project type<select value={preferences.projectType} onChange={(event) => setPreferences({ ...preferences, projectType: event.target.value })}><option>Web application</option><option>Mobile application</option><option>Business portal</option><option>E-commerce store</option><option>Internal tool</option></select></label><label>Default document language<select value={preferences.language || "English"} onChange={(event) => setPreferences({ ...preferences, language: event.target.value })}><option>English</option><option>Tamil</option><option>Hindi</option></select></label><label className="settings-check"><input type="checkbox" checked={preferences.reminders} onChange={(event) => setPreferences({ ...preferences, reminders: event.target.checked })} /> Show deadline reminders</label><label className="settings-check"><input type="checkbox" checked={preferences.compact} onChange={(event) => setPreferences({ ...preferences, compact: event.target.checked })} /> Use compact project cards</label><button className="primary-btn" type="submit">Save workspace preferences</button>{saved && <span className="save-success">Preferences saved</span>}</form></section></section>;
+  return (
+  <section className="panel padded workspace-preferences-card">
+    <div className="section-head">
+      <div>
+        <small>WORKSPACE PREFERENCES</small>
+        <h2>Make SRS AI work your way</h2>
+        <p>These options are saved on this device and used when you plan new projects.</p>
+      </div>
+    </div>
+
+    <form onSubmit={save} className="settings-options">
+      <label>
+        Default project type
+        <select
+          value={preferences.projectType}
+          onChange={(event) =>
+            setPreferences({ ...preferences, projectType: event.target.value })
+          }
+        >
+          <option>Web application</option>
+          <option>Mobile application</option>
+          <option>Business portal</option>
+          <option>E-commerce store</option>
+          <option>Internal tool</option>
+        </select>
+      </label>
+
+      <label>
+        Default document language
+        <select
+          value={preferences.language || "English"}
+          onChange={(event) =>
+            setPreferences({ ...preferences, language: event.target.value })
+          }
+        >
+          <option>English</option>
+          <option>Tamil</option>
+          <option>Hindi</option>
+        </select>
+      </label>
+
+      <label className="settings-check">
+        <input
+          type="checkbox"
+          checked={preferences.reminders}
+          onChange={(event) =>
+            setPreferences({ ...preferences, reminders: event.target.checked })
+          }
+        />
+        Show deadline reminders
+      </label>
+
+      <label className="settings-check">
+        <input
+          type="checkbox"
+          checked={preferences.compact}
+          onChange={(event) =>
+            setPreferences({ ...preferences, compact: event.target.checked })
+          }
+        />
+        Use compact project cards
+      </label>
+
+      <button className="primary-btn" type="submit">
+        Save workspace preferences
+      </button>
+
+      {saved && <span className="save-success">Preferences saved</span>}
+    </form>
+  </section>
+);
 }
 
-function Layout({ user, page, navigate, logout, children }) { return <div className={`app ${localStorage.getItem("srs-theme") || "light"}`}><Sidebar {...{ page, navigate }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span><details className="topbar-profile"><summary aria-label={`Profile: ${user.name}`}><span className="topbar-avatar" style={{ backgroundImage: profileGradient(user.id ?? user.email ?? user.name) }}>{user.profile_image || user.profilePhoto ? <img src={user.profile_image || user.profilePhoto} alt="" /> : user.name?.trim().charAt(0).toUpperCase() || "U"}</span><span className="topbar-profile-name">{user.name}</span><span className="topbar-profile-caret" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg></span></summary><div className="topbar-profile-menu"><span>{user.email}</span><button type="button" onClick={() => navigate("settings")}>Settings</button><button type="button" onClick={logout}>Sign out</button></div></details></header>{page === "dashboard" && <div className="overview-shell"><ProjectOverviewTools openProject={(id) => navigate("project", id)} /></div>}{page === "settings" && <WorkspaceSettingsPanel />}{children}</main><MobileNav {...{ page, navigate }} /></div>; }
+function Layout({ user, page, navigate, logout, children }) { return <div className={`app ${localStorage.getItem("srs-theme") || "light"}`}><Sidebar {...{ page, navigate }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span><details className="topbar-profile"><summary aria-label={`Profile: ${user.name}`}><span className="topbar-avatar" style={{ backgroundImage: profileGradient(user.id ?? user.email ?? user.name) }}>{user.profile_image || user.profilePhoto ? <img src={user.profile_image || user.profilePhoto} alt="" /> : user.name?.trim().charAt(0).toUpperCase() || "U"}</span><span className="topbar-profile-name">{user.name}</span><span className="topbar-profile-caret" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg></span></summary><div className="topbar-profile-menu"><span>{user.email}</span><button type="button" onClick={() => navigate("settings")}>Settings</button><button type="button" onClick={logout}>Sign out</button></div></details></header>{page === "dashboard" && <div className="overview-shell"><ProjectOverviewTools openProject={(id) => navigate("project", id)} /></div>}{children}</main><MobileNav {...{ page, navigate }} /></div>; }
 
 function Dashboard({ user, navigate, openProject, logout, page }) {const [loading, setLoading] = useState(true);
 const [projectProgress, setProjectProgress] = useState(0);
@@ -317,7 +387,13 @@ const load = useCallback(async () => {
   label={`Opening your project... ${projectProgress}%`}
   detail="Loading your requirements workspace…"
   progress={projectProgress}
-/> : projects.length === 0 ? <div className="empty"><b>{search || status ? "No matching projects" : "Your workspace is empty"}</b><span>{search || status ? "Try a different filter." : "Create your first project to get started."}</span></div> : <><div className="project-row header"><span>Project</span><span>Status</span><span>Updated</span><span /></div>{projects.map((project) => <div className="project-row" key={project.id}><button className="project-link" onClick={() => openProject(project.id)}><i style={{ backgroundColor: project.color || projectIconColor(project.id) }} aria-hidden="true">{project.icon || project.name?.trim().charAt(0).toUpperCase() || "P"}</i><span><b>{project.is_favorite ? "★ " : ""}{project.name}</b><small className="project-client">{project.client_name || "No client"}</small></span></button><span className="status">{project.status.replace("_", " ")}</span><span>{date(project.updated_at)}</span><button className="row-delete" title={`Delete ${project.name}`} onClick={() => remove(project)}>×</button></div>)}</>}</section></section>{showCreate && <Modal title="Create a project" onClose={() => setShowCreate(false)}><form onSubmit={create}><label>Project name<input required maxLength="255" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label><label>Client name <small>(optional)</small><input maxLength="150" placeholder="Client or company name" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} /></label><label>What are you building?<textarea required rows="5" value={form.clientIdea} onChange={(e) => setForm({ ...form, clientIdea: e.target.value })} /></label><button className="primary-btn full">Create project →</button></form></Modal>}</Layout>;
+/> : projects.length === 0 ? <div className="empty"><b>{search || status ? "No matching projects" : "Your workspace is empty"}</b><span>{search || status ? "Try a different filter." : "Create your first project to get started."}</span></div> : <><div className="project-row header"><span>Project</span><span>Status</span><span>Updated</span><span /></div>{projects.map((project) => <div className="project-row" key={project.id}><button className="project-link" onClick={() => openProject(project.id)}><i style={{ backgroundColor: project.color || projectIconColor(project.id) }} aria-hidden="true">{project.icon || project.name?.trim().charAt(0).toUpperCase() || "P"}</i><span><b>{project.is_favorite ? "★ " : ""}{project.name}</b><small className="project-client">{project.client_name || "No client"}</small></span></button><span className="status">{project.status.replace("_", " ")}</span><span>{date(project.updated_at)}</span><button className="row-delete" title={`Delete ${project.name}`} onClick={() => remove(project)}>×</button></div>)}</>}</section></section>{showCreate && <Modal title="Create a project" onClose={() => setShowCreate(false)}><form onSubmit={create}><label>Project name<input required maxLength="255" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label><label>Client name <small>(optional)</small><input maxLength="150" placeholder="Client or company name" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} /></label><label>What are you building?<textarea required rows="5" value={form.clientIdea} onChange={(e) => setForm({ ...form, clientIdea: e.target.value })} /></label><div className="member-since-row">
+  <span className="member-since-icon">▦</span>
+  <span className="member-since-label">Member since</span>
+  <strong className="member-since-date">
+    {user.created_at ? date(user.created_at) : "Date unavailable"}
+  </strong>
+</div><button className="primary-btn full">Create project →</button></form></Modal>}</Layout>;
 }
 
 function DashboardV2({ user, navigate, openProject, logout, page }) {
@@ -341,8 +417,8 @@ function DashboardV2({ user, navigate, openProject, logout, page }) {
       <div className="welcome dashboard-hero"><div><small>YOUR WORKSPACE</small><h1>Welcome back, {user.name.split(" ")[0]}.</h1><p>Organise your ideas, clarify the scope, and create SRS documents your team can confidently build from.</p></div><button className="primary-btn hero-cta" onClick={() => setShowCreate(true)}>＋ New project</button></div>
       {error && <div className="message error">{error}</div>}
       <section className="dashboard-card-grid" aria-label="Project summary"><article className="dashboard-card"><span className="dashboard-card-icon">▤</span><div><small>TOTAL PROJECTS</small><strong>{projects.length}</strong><p>All projects in your workspace</p></div></article><article className="dashboard-card"><span className="dashboard-card-icon active">↗</span><div><small>ACTIVE WORK</small><strong>{activeProjects}</strong><p>Projects currently in progress</p></div></article><article className="dashboard-card"><span className="dashboard-card-icon approved">✓</span><div><small>APPROVED</small><strong>{approvedProjects}</strong><p>Projects ready to deliver</p></div></article><article className={`dashboard-card ${urgentProjects ? "alert" : ""}`}><span className="dashboard-card-icon deadline">◷</span><div><small>DEADLINE ALERTS</small><strong>{urgentProjects}</strong><p>{urgentProjects ? "Due soon or overdue" : "Nothing urgent right now"}</p></div></article></section>
-      <section className="panel deadline-calendar"><div className="section-head"><div><small>UPCOMING DEADLINES</small><h2>Delivery calendar</h2><p>Keep an eye on the next project milestones.</p></div><button className="text-btn" onClick={() => navigate("projects")}>View projects</button></div>{upcomingDeadlines.length ? <div className="deadline-list">{upcomingDeadlines.map((project) => <button key={project.id} onClick={() => openProject(project.id)}><i>{new Date(project.deadline).toLocaleDateString(undefined, { month: "short" }).toUpperCase()}<b>{new Date(project.deadline).getDate()}</b></i><span><b>{project.name}</b><small>{project.client_name || "No client added"} · {dueText(project.deadline)}</small></span><em>→</em></button>)}</div> : <div className="empty compact-empty"><b>No upcoming deadlines</b><span>Add a completion date to a project to see it here.</span></div>}</section>
       {showWelcome && <section className="welcome-launchpad" aria-label="Getting started"><div className="launchpad-grid"><div className="launchpad-copy"><div className="launchpad-title-row"><span className="launchpad-orb">✦</span><small>WELCOME TO SRS AI</small></div><h2>Turn your next big idea into a build-ready plan.</h2><p>Create a project, complete the guided discovery questions, and get a professional SRS ready for your client and development team.</p><div className="launchpad-buttons"><button className="primary-btn" onClick={() => setShowCreate(true)}>Create your first project <span>→</span></button><button className="welcome-dismiss" type="button" onClick={finishWelcome}>I’ll explore first</button></div></div><div className="launchpad-steps"><div className="launchpad-progress"><span>Getting started</span><b>3 simple steps</b></div><article><i>01</i><span><b>Capture the project</b><small>Add the client, completion date, and your software idea.</small></span><em>→</em></article><article><i>02</i><span><b>Answer with confidence</b><small>Use guided choices to clarify the project scope.</small></span><em>→</em></article><article><i>03</i><span><b>Deliver the SRS</b><small>Generate, review, and export a polished document.</small></span></article></div></div></section>}
+      <section className="panel deadline-calendar"><div className="section-head"><div><small>UPCOMING DEADLINES</small><h2>Delivery calendar</h2><p>Keep an eye on the next project milestones.</p></div><button className="text-btn" onClick={() => navigate("projects")}>View projects</button></div>{upcomingDeadlines.length ? <div className="deadline-list">{upcomingDeadlines.map((project) => <button key={project.id} onClick={() => openProject(project.id)}><i>{new Date(project.deadline).toLocaleDateString(undefined, { month: "short" }).toUpperCase()}<b>{new Date(project.deadline).getDate()}</b></i><span><b>{project.name}</b><small>{project.client_name || "No client added"} · {dueText(project.deadline)}</small></span><em>→</em></button>)}</div> : <div className="empty compact-empty"><b>No upcoming deadlines</b><span>Add a completion date to a project to see it here.</span></div>}</section>
       <section className="panel projects-panel"><div className="section-head"><div><small>ALL PROJECTS</small><h2>Your project workspace</h2></div>{projects.length > 0 && <span className="project-count">{projects.length} active</span>}</div>{projects.length ? <div className="overview-list">{projects.map((project, index) => <article key={project.id} className="overview-item animated-project" style={{ "--item-index": index }}><button className="overview-main" onClick={() => openProject(project.id)}><i style={{ background: project.color || projectIconColor(project.id) }}>{project.icon || project.name?.charAt(0).toUpperCase() || "P"}</i><span><b>{project.name}</b><small>{project.client_name || "No client"} · {dueText(project.deadline)}</small></span></button><span className={`overview-status ${project.status}`}>{project.status.replace("_", " ")}</span></article>)}</div> : <div className="empty compact-empty"><b>No projects yet</b><span>Create your first project to start organising requirements.</span></div>}</section>
     </section>
     {showCreate && <Modal title="Plan a new project" onClose={() => setShowCreate(false)}><form onSubmit={create}><label>Project name<input required maxLength="255" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label>Client name <small>(optional)</small><input maxLength="150" placeholder="Client or company" value={form.client_name} onChange={(event) => setForm({ ...form, client_name: event.target.value })} /></label><label>Target completion date <small>(optional)</small><input type="date" min={new Date().toISOString().slice(0, 10)} value={form.deadline} onChange={(event) => setForm({ ...form, deadline: event.target.value })} /></label><label>Project type<select value={form.projectType} onChange={(event) => setForm({ ...form, projectType: event.target.value })}><option>Web application</option><option>Mobile application</option><option>Business portal</option><option>E-commerce store</option><option>Internal tool</option></select></label><label>What are you building?<textarea required rows="5" value={form.clientIdea} onChange={(event) => setForm({ ...form, clientIdea: event.target.value })} /></label><p className="form-hint">After creation, we add starter questions about users, access, goals, and sensitive data.</p><button className="primary-btn full">Create project →</button></form></Modal>}
@@ -401,7 +477,7 @@ function ProjectManagementContent({ project, document, onEdit, onApprove, onFavo
 }
 
 function Project({ user, id, navigate, logout }) {
-  const [project, setProject] = useState(null); const [draft, setDraft] = useState(""); const [answers, setAnswers] = useState({}); const [versions, setVersions] = useState([]); const [exports, setExports] = useState([]); const [note, setNote] = useState(""); const [busy, setBusy] = useState(false); const [srsProgress, setSrsProgress] = useState(0); const [projectProgress, setProjectProgress] = useState(0); const [deleteProgress, setDeleteProgress] = useState(0); const [showManage, setShowManage] = useState(false); const [activity, setActivity] = useState(null); const [manageForm, setManageForm] = useState({}); const [plan, setPlan] = useState(emptyProjectPlan());
+  const [project, setProject] = useState(null); const [draft, setDraft] = useState(""); const [answers, setAnswers] = useState({}); const [versions, setVersions] = useState([]); const [exports, setExports] = useState([]); const [note, setNote] = useState(""); const [showRemovePhotoModal, setShowRemovePhotoModal] = useState(false); const [busy, setBusy] = useState(false); const [srsProgress, setSrsProgress] = useState(0); const [projectProgress, setProjectProgress] = useState(0); const [deleteProgress, setDeleteProgress] = useState(0); const [showManage, setShowManage] = useState(false); const [activity, setActivity] = useState(null); const [manageForm, setManageForm] = useState({}); const [plan, setPlan] = useState(emptyProjectPlan());
   const load = useCallback(async () => {
   setProjectProgress(10);
 
@@ -508,7 +584,7 @@ const generate = async (kind) => {
   const duplicateProject = async () => { setBusy("duplicate"); try { const copy = await api(`/api/projects/${id}/duplicate`, { method: "POST" }); navigate("project", copy.id); } catch (err) { setNote(err.message); } finally { setBusy(false); } };
   const archiveProject = async () => { if (!window.confirm("Archive this project? You can keep its documents without showing it in active work.")) return; setBusy("archive"); try { await api(`/api/projects/${id}/archive`, { method: "POST" }); navigate("dashboard"); } catch (err) { setNote(err.message); } finally { setBusy(false); } };
   const toggleActivity = async () => { if (activity) return setActivity(null); setBusy("activity"); try { setActivity(await api(`/api/projects/${id}/activity`)); } catch (err) { setNote(err.message); } finally { setBusy(false); } };
-  return <Layout user={user} page="project" navigate={navigate} logout={logout}><section className="content"><div className="breadcrumb"><button onClick={() => navigate("dashboard")}>Projects</button> / <b>{project.name}</b></div><div className="welcome"><div><small>ACTIVE PROJECT</small><h1>{project.name}</h1><p>{project.client_idea}</p></div><div className="actions"><button className="outline" onClick={() => generate("questions")} disabled={Boolean(busy)}>✦ Ask AI</button><button className="primary-btn" onClick={() => generate("srs")} disabled={Boolean(busy)}>{busy === "srs" ? `Generating SRS... ${srsProgress}%` : "✦ Generate SRS"}</button><button className="outline" onClick={() => navigate("dashboard")} disabled={Boolean(busy)}>← Back</button><button className="delete-btn" onClick={removeProject} disabled={Boolean(busy)}>{busy === "delete" ? <InlineLoader>Deleting…</InlineLoader> : "Delete project"}</button></div></div>{note && <div className="message notice">{note}</div>}{busy === "questions" && <GenerateLoader label="Creating clarification questions" detail="Finding the details that matter most…" />}{busy === "delete" && <GenerateLoader label="Deleting your project" detail="Removing the project, SRS versions, and exports safely…" progress={deleteProgress} />}<ProjectManagementPanel project={project} onEdit={openManage} onApprove={approveProject} onFavorite={favoriteProject} onDuplicate={duplicateProject} onArchive={archiveProject} onActivity={toggleActivity} activity={activity} busy={busy} /><div className="project-grid"><section className="panel padded"><div className="section-head"><div><h2>Clarification questions</h2><p>Answer these to improve the SRS.</p></div></div>{project.clarification_questions?.length ? project.clarification_questions.map((q, index) => <article className="question" key={q.id}><i>{index + 1}</i><div><b>{q.question}</b><QuestionAnswer question={q} value={answers[q.id] || ""} onChange={(answer) => setAnswers({ ...answers, [q.id]: answer })} onSave={(answer, selectedChoices) => saveAnswer(q.id, answer, selectedChoices)} busy={busy === `answer-${q.id}`} /></div></article>) : <div className="empty">No clarification questions yet. Use Ask AI to generate them.</div>}</section><section className="panel padded"><div className="section-head"><div><h2>Current SRS {latest && <small>v{latest.version}</small>}</h2><p>Simple explanation for users, clear instructions for developers, plus time and cost estimates.</p></div><button className="outline" onClick={showVersions} disabled={!latest || Boolean(busy)}>{busy === "history" ? <InlineLoader>Loading…</InlineLoader> : "History"}</button></div><textarea className="srs-editor" rows="18" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Generate or write your SRS here…" /><div className="actions"><button className="primary-btn" onClick={save} disabled={Boolean(busy)}>{busy === "save" ? <InlineLoader>Saving…</InlineLoader> : "Save version"}</button><button className="outline" onClick={() => download("pdf")} disabled={!latest || Boolean(busy)}>{busy === "export-pdf" ? <InlineLoader>Exporting…</InlineLoader> : "Export PDF"}</button><button className="outline" onClick={() => download("docx")} disabled={!latest || Boolean(busy)}>{busy === "export-docx" ? <InlineLoader>Exporting…</InlineLoader> : "Export DOCX"}</button></div>{versions.length > 0 && <div className="version-list"><b>Version history</b>{versions.map((version) => <div key={version.id}><span>Version {version.version} · {date(version.created_at)}</span><button className="text-btn" onClick={() => restore(version.version)} disabled={Boolean(busy)}>{busy === `restore-${version.version}` ? <InlineLoader>Restoring…</InlineLoader> : "Restore"}</button></div>)}</div>}{exports.length > 0 && <div className="version-list"><b>Export history</b>{exports.map((item) => <div key={item.id}><span>{item.format.toUpperCase()} · {date(item.created_at)}</span><span>Downloaded</span></div>)}</div>}</section></div></section>{showManage && <Modal title="Edit project details" onClose={() => setShowManage(false)}><form onSubmit={updateProject}><label>Project name<input required maxLength="255" value={manageForm.name || ""} onChange={(event) => setManageForm({ ...manageForm, name: event.target.value })} /></label><label>Client name<input maxLength="150" value={manageForm.client_name || ""} onChange={(event) => setManageForm({ ...manageForm, client_name: event.target.value })} /></label><label>Completion date<input type="date" value={manageForm.deadline || ""} onChange={(event) => setManageForm({ ...manageForm, deadline: event.target.value })} /></label><label>Project status<select value={manageForm.status || "draft"} onChange={(event) => setManageForm({ ...manageForm, status: event.target.value })}><option value="draft">Draft</option><option value="in_progress">In progress</option><option value="complete">Approved / complete</option></select></label><label>Project description<textarea required rows="4" value={manageForm.clientIdea || ""} onChange={(event) => setManageForm({ ...manageForm, clientIdea: event.target.value })} /></label><label>Private project notes <small>(optional)</small><textarea rows="3" value={manageForm.notes || ""} onChange={(event) => setManageForm({ ...manageForm, notes: event.target.value })} /></label><button className="primary-btn full" disabled={Boolean(busy)}>{busy === "project-update" ? "Saving project…" : "Save project changes"}</button></form></Modal>}</Layout>;
+  return <Layout user={user} page="project" navigate={navigate} logout={logout}><section className="content"><div className="breadcrumb"><button onClick={() => navigate("dashboard")}>Projects</button> / <b>{project.name}</b></div><div className="welcome"><div><small>ACTIVE PROJECT</small><h1>{project.name}</h1><p>{project.client_idea}</p></div><div className="actions"><button className="outline" onClick={() => generate("questions")} disabled={Boolean(busy)}>✦ Ask AI</button><button className="primary-btn" onClick={() => generate("srs")} disabled={Boolean(busy)}>{busy === "srs" ? `Generating SRS... ${srsProgress}%` : "✦ Generate SRS"}</button><button className="outline" onClick={() => navigate("dashboard")} disabled={Boolean(busy)}>← Back</button><button className="delete-btn" onClick={removeProject} disabled={Boolean(busy)}>{busy === "delete" ? <InlineLoader>Deleting…</InlineLoader> : "Delete project"}</button></div></div>{note && <div className="message notice">{note}</div>}{busy === "questions" && <GenerateLoader label="Creating clarification questions" detail="Finding the details that matter most…" />}{busy === "delete" && <GenerateLoader label="Deleting your project" detail="Removing the project, SRS versions, and exports safely…" progress={deleteProgress} />}<ProjectManagementPanel project={project} onEdit={openManage} onApprove={approveProject} onFavorite={favoriteProject} onDuplicate={duplicateProject} onArchive={archiveProject} onActivity={toggleActivity} activity={activity} busy={busy} /><div className="project-grid"><section className="panel padded appearance-settings-card"><div className="section-head"><div><h2>Clarification questions</h2><p>Answer these to improve the SRS.</p></div></div>{project.clarification_questions?.length ? project.clarification_questions.map((q, index) => <article className="question" key={q.id}><i>{index + 1}</i><div><b>{q.question}</b><QuestionAnswer question={q} value={answers[q.id] || ""} onChange={(answer) => setAnswers({ ...answers, [q.id]: answer })} onSave={(answer, selectedChoices) => saveAnswer(q.id, answer, selectedChoices)} busy={busy === `answer-${q.id}`} /></div></article>) : <div className="empty">No clarification questions yet. Use Ask AI to generate them.</div>}</section><section className="panel padded appearance-settings-card"><div className="section-head"><div><h2>Current SRS {latest && <small>v{latest.version}</small>}</h2><p>Simple explanation for users, clear instructions for developers, plus time and cost estimates.</p></div><button className="outline" onClick={showVersions} disabled={!latest || Boolean(busy)}>{busy === "history" ? <InlineLoader>Loading…</InlineLoader> : "History"}</button></div><textarea className="srs-editor" rows="18" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Generate or write your SRS here…" /><div className="actions"><button className="primary-btn" onClick={save} disabled={Boolean(busy)}>{busy === "save" ? <InlineLoader>Saving…</InlineLoader> : "Save version"}</button><button className="outline" onClick={() => download("pdf")} disabled={!latest || Boolean(busy)}>{busy === "export-pdf" ? <InlineLoader>Exporting…</InlineLoader> : "Export PDF"}</button><button className="outline" onClick={() => download("docx")} disabled={!latest || Boolean(busy)}>{busy === "export-docx" ? <InlineLoader>Exporting…</InlineLoader> : "Export DOCX"}</button></div>{versions.length > 0 && <div className="version-list"><b>Version history</b>{versions.map((version) => <div key={version.id}><span>Version {version.version} · {date(version.created_at)}</span><button className="text-btn" onClick={() => restore(version.version)} disabled={Boolean(busy)}>{busy === `restore-${version.version}` ? <InlineLoader>Restoring…</InlineLoader> : "Restore"}</button></div>)}</div>}{exports.length > 0 && <div className="version-list"><b>Export history</b>{exports.map((item) => <div key={item.id}><span>{item.format.toUpperCase()} · {date(item.created_at)}</span><span>Downloaded</span></div>)}</div>}</section></div></section>{showManage && <Modal title="Edit project details" onClose={() => setShowManage(false)}><form onSubmit={updateProject}><label>Project name<input required maxLength="255" value={manageForm.name || ""} onChange={(event) => setManageForm({ ...manageForm, name: event.target.value })} /></label><label>Client name<input maxLength="150" value={manageForm.client_name || ""} onChange={(event) => setManageForm({ ...manageForm, client_name: event.target.value })} /></label><label>Completion date<input type="date" value={manageForm.deadline || ""} onChange={(event) => setManageForm({ ...manageForm, deadline: event.target.value })} /></label><label>Project status<select value={manageForm.status || "draft"} onChange={(event) => setManageForm({ ...manageForm, status: event.target.value })}><option value="draft">Draft</option><option value="in_progress">In progress</option><option value="complete">Approved / complete</option></select></label><label>Project description<textarea required rows="4" value={manageForm.clientIdea || ""} onChange={(event) => setManageForm({ ...manageForm, clientIdea: event.target.value })} /></label><label>Private project notes <small>(optional)</small><textarea rows="3" value={manageForm.notes || ""} onChange={(event) => setManageForm({ ...manageForm, notes: event.target.value })} /></label><button className="primary-btn full" disabled={Boolean(busy)}>{busy === "project-update" ? "Saving project…" : "Save project changes"}</button></form></Modal>}</Layout>;
 }
 
 function Templates({ user, navigate, logout }) {
@@ -518,13 +594,25 @@ function Templates({ user, navigate, logout }) {
 }
 
 function Settings({ user, setUser, navigate, logout }) {
+  const [showRemovePhotoModal, setShowRemovePhotoModal] = useState(false);
   const [profile, setProfile] = useState({
   name: user.name,
   email: user.email
 });
+const [saving, setSaving] = useState(false);
+const [saveProgress, setSaveProgress] = useState(0);
 const [theme, setTheme] = useState(
   localStorage.getItem("srs-theme") || "light"
 );
+const [accentColor, setAccentColor] = useState(
+  localStorage.getItem("srs-accent-color") || "#7655b5"
+);
+
+const changeAccentColor = (color) => {
+  setAccentColor(color);
+  localStorage.setItem("srs-accent-color", color);
+  document.documentElement.style.setProperty("--accent", color);
+};
 const changeTheme = (nextTheme) => {
   setTheme(nextTheme);
   localStorage.setItem("srs-theme", nextTheme);
@@ -553,9 +641,22 @@ const [profilePhoto, setProfilePhoto] = useState(
   user.profile_image || user.profilePhoto || ""
 ); const [password, setPassword] = useState({ currentPassword: "", newPassword: "" }); const [note, setNote] = useState("");
 {
-}; 
+};
 const saveProfile = async (event) => {
   event.preventDefault();
+
+  if (saving) return;
+
+  setSaving(true);
+  setSaveProgress(0);
+  setNote("");
+
+  let progress = 0;
+
+  const progressTimer = setInterval(() => {
+    progress = Math.min(progress + 10, 90);
+    setSaveProgress(progress);
+  }, 150);
 
   try {
     const next = await api("/api/me", {
@@ -566,6 +667,9 @@ const saveProfile = async (event) => {
       })
     });
 
+    clearInterval(progressTimer);
+    setSaveProgress(100);
+
     const updated = {
       ...user,
       ...next,
@@ -574,12 +678,67 @@ const saveProfile = async (event) => {
 
     sessionStorage.setItem("srs-session", JSON.stringify(updated));
     setUser(updated);
-    setNote("Profile updated.");
+
+    setNote("Profile saved successfully!");
+
   } catch (err) {
-    setNote(err.message);
+    clearInterval(progressTimer);
+    setSaveProgress(0);
+    setNote(err.message || "Failed to save profile.");
+  } finally {
+    clearInterval(progressTimer);
+    setSaving(false);
   }
 };  const remove = async () => { if (window.confirm("Delete your account and all projects permanently?")) { await api("/api/me", { method: "DELETE" }); logout(); } };
-  return <Layout user={{ ...user, ...profile }} page="settings" navigate={navigate} logout={logout}><section className="content settings"><div className="welcome"><div><small>ACCOUNT</small><h1>Settings</h1><p>Manage your profile and workspace access.</p></div></div>{note && <div className="message notice">{note}</div>}<div className="settings-grid">
+  const confirmRemovePhoto = () => {
+setProfilePhoto("");
+setShowRemovePhotoModal(false);
+setNote("Profile photo removed.");
+};
+ return <Layout user={{ ...user, ...profile }} page="settings" navigate={navigate} logout={logout}><section className="content settings"><div className="welcome"><div><small>ACCOUNT</small><h1>Settings</h1><p>Manage your profile and workspace access.</p></div></div>
+ {note && <div className="message notice">{note}</div>}
+<div className="settings-grid">
+{showRemovePhotoModal && (
+
+  <div className="modal-backdrop">
+    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="remove-photo-title">
+      <div className="section-head">
+        <h2 id="remove-photo-title">Remove profile photo?</h2>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => setShowRemovePhotoModal(false)}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+```
+  <p>Are you sure you want to remove your profile photo?</p>
+
+  <div className="modal-actions">
+    <button
+      type="button"
+      className="secondary-btn"
+      onClick={() => setShowRemovePhotoModal(false)}
+    >
+      Cancel
+    </button>
+
+    <button
+      type="button"
+      className="delete-btn"
+      onClick={confirmRemovePhoto}
+    >
+      Remove
+    </button>
+  </div>
+</div>
+```
+
+  </div>
+)}
 
   <section className="panel padded">
   <div className="section-head">
@@ -620,9 +779,44 @@ const saveProfile = async (event) => {
       {theme === "dark" && <b className="theme-check">✓</b>}
     </button>
   </div>
-</section>
 
-  <section className="panel padded">
+<div className="accent-picker"> 
+     <h3>Accent Colour</h3>
+  <p>Choose your favourite colour for buttons and highlights.</p>
+
+  <div className="accent-colors">
+    {[
+      { name: "Navy Blue", color: "#183153" },
+      { name: "Deep Navy", color: "#101a35" },
+      { name: "Navy Purple", color: "#35245f" },
+      { name: "Midnight Blue", color: "#172554" },
+      { name: "Indigo", color: "#4338ca" },
+      { name: "Royal Purple", color: "#7655b5" },
+      { name: "Dark Teal", color: "#115e59" },
+      { name: "Burgundy", color: "#881337" }
+    ].map((item) => (
+      <button
+        key={item.name}
+        type="button"
+        className={`accent-swatch ${
+          accentColor === item.color ? "selected" : ""
+        }`}
+        style={{ "--swatch-color": item.color }}
+        onClick={() => changeAccentColor(item.color)}
+        title={item.name}
+        aria-label={item.name}
+      >
+        <span className="accent-swatch-circle">
+          {accentColor === item.color ? "✓" : ""}
+        </span>
+        <span>{item.name}</span>
+      </button>
+    ))}
+  </div>
+</div>
+</section>
+<WorkspaceSettingsPanel />
+  <section className="panel padded profile-settings-card">
   <h2>Profile</h2>
 
   <div className="profile-photo-section">
@@ -680,12 +874,170 @@ reader.onload = () => {
 
 reader.readAsDataURL(file);          }}
         />
-      </label>
+  </label>
+<button
+type="button"
+className="remove-photo-btn"
+style={{ marginLeft: "10px" }}
+onClick={() => setShowRemovePhotoModal(true)}
 
-      <small>JPG or PNG · Max 2MB</small>
+>
+
+<svg
+width="17"
+height="17"
+viewBox="0 0 24 24"
+fill="none"
+stroke="currentColor"
+strokeWidth="2"
+strokeLinecap="round"
+strokeLinejoin="round"
+aria-hidden="true"
+
+>
+
+```
+<path d="M3 6h18" />
+```
+
+```
+<path d="M8 6V4h8v2" />
+<path d="m19 6-1 14H6L5 6" />
+<path d="M10 11v5M14 11v5" />
+```
+
+  </svg>
+  Remove photo
+</button>
+
+  <small>JPG or PNG · Max 2MB</small>
+</div>
+
+  </div>
+
+  <form onSubmit={saveProfile}><label>Name<input required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></label><label>Email<input required type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} /></label><div className="member-since-row">
+  <span className="member-since-icon" aria-hidden="true">
+    ▦
+  </span>
+
+  <span className="member-since-label">Member since</span>
+
+  <strong className="member-since-date">
+    {user.created_at ? date(user.created_at) : "Date unavailable"}
+  </strong>
+</div><button
+  className="primary-btn full profile-save-btn"
+  type="submit"
+  disabled={saving}
+>
+  {saving ? (
+    <div className="save-btn-progress">
+      <div className="save-btn-progress-header">
+        <span>Saving profile...</span>
+        <strong>{saveProgress}%</strong>
+      </div>
+
+      <div className="save-btn-progress-track">
+        <div
+          className="save-btn-progress-fill"
+          style={{ width: `${saveProgress}%` }}
+        />
+      </div>
+    </div>
+  ) : (
+    "Save profile"
+  )}
+</button></form></section><section className="panel padded security-card"><h2>Account security</h2><p>Protect your workspace and keep your account up to date.</p><div className="security-status"><span>●</span><div><b>Last signed in</b><small>{user.last_login_at ? date(user.last_login_at) : "Your first sign-in will appear here"}</small></div></div><div className="security-status"><span>✓</span><div><b>Email verification</b><small>Your account email is verified</small></div></div></section>
+
+<section className="panel padded connected-accounts-card">
+  <div className="section-head">
+    <div>
+      <h2>Connected accounts</h2>
+      <p>Manage your connected third-party accounts.</p>
     </div>
   </div>
-  <form onSubmit={saveProfile}><label>Name<input required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></label><label>Email<input required type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} /></label><button className="primary-btn full">Save profile</button></form></section><section className="panel padded security-card"><h2>Account security</h2><p>Protect your workspace and keep your account up to date.</p><div className="security-status"><span>●</span><div><b>Last signed in</b><small>{user.last_login_at ? date(user.last_login_at) : "Your first sign-in will appear here"}</small></div></div><div className="security-status"><span>✓</span><div><b>Email verification</b><small>Your account email is verified</small></div></div></section><section className="panel padded"><h2>Change password</h2><form onSubmit={changePassword}><label>Current password<input required type="password" value={password.currentPassword} onChange={(e) => setPassword({ ...password, currentPassword: e.target.value })} /></label><label>New password<input required minLength="8" type="password" value={password.newPassword} onChange={(e) => setPassword({ ...password, newPassword: e.target.value })} /></label><button className="primary-btn full">Change password</button></form></section><section className="panel padded danger-panel"><h2>Danger zone</h2><p className="muted">Permanently delete your account, projects, and exports.</p><button className="delete-btn" onClick={remove}>Delete account</button></section></div></section></Layout>;
+
+
+<div className="connected-account-row">
+  <div className="google-account-info">
+    <div className="google-logo">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#4285F4" d="M43.6 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11a9.4 9.4 0 0 1-4.1 6.2v5.1h6.7c3.9-3.6 6-8.9 6-15.3Z"/>
+        <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.9l-6.7-5.1c-1.8 1.2-4 2-6.8 2-5.2 0-9.6-3.5-11.2-8.2H5.9v5.2A20 20 0 0 0 24 44Z"/>
+        <path fill="#FBBC05" d="M12.8 27.8a12 12 0 0 1 0-7.6V15H5.9a20 20 0 0 0 0 18Z"/>
+        <path fill="#EA4335" d="M24 12.1c3 0 5.7 1 7.8 3.1l5.9-5.9C34.1 6.1 29.5 4 24 4A20 20 0 0 0 5.9 15l6.9 5.2c1.6-4.7 6-8.1 11.2-8.1Z"/>
+      </svg>
+    </div>
+
+    <div className="google-account-text">
+      <strong>Google</strong>
+      <span>Connect your Google account to sign in faster.</span>
+    </div>
+  </div>
+
+  <div className="google-account-actions">
+    <span className="google-status">
+      <span className="google-status-dot"></span>
+      Not connected
+    </span>
+
+    <button
+      type="button"
+      className="secondary-btn connect-google-btn"
+      onClick={() =>
+        setNote("Google connection will be enabled after backend setup.")
+      }
+    >
+      <span className="connect-icon">↗</span>
+      Connect Google
+    </button>
+  </div>
+</div>
+
+<div className="google-account-note">
+  <span className="google-note-icon">ⓘ</span>
+<span>Manage your Google connection and sign-in settings here.</span></div>
+
+</section>
+
+<section className="panel padded">
+  <h2>Change password</h2>
+```
+<form onSubmit={changePassword}><label>Current password<input required type="password" value={password.currentPassword} onChange={(e) => setPassword({ ...password, currentPassword: e.target.value })} /></label><label>New password<input required minLength="8" type="password" value={password.newPassword} onChange={(e) => setPassword({ ...password, newPassword: e.target.value })} /></label><button className="primary-btn full">Change password</button></form></section><section className="panel padded danger-panel">
+  <h2>Danger zone</h2>
+
+  <p className="muted">
+    Permanently delete your account, projects, and exports.
+  </p>
+
+  <div className="danger-actions">
+    <button
+      type="button"
+      className="logout-danger-btn"
+      onClick={logout}
+    >
+      <span className="logout-danger-icon" aria-hidden="true">
+        ⇥
+      </span>
+
+      <span className="logout-danger-text">
+        <strong>Logout</strong>
+        <small>Sign out from this device</small>
+      </span>
+    </button>
+
+    <button
+      type="button"
+      className="delete-btn"
+      onClick={remove}
+    >
+      Delete account
+    </button>
+  </div>
+</section>
+</div>
+</section>
+</Layout>;
 }
 
 function Modal({ title, onClose, children }) { return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={(event) => event.stopPropagation()}><div className="section-head"><h2>{title}</h2><button className="icon-btn" onClick={onClose}>×</button></div>{children}</div></div>; }
