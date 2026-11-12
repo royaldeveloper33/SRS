@@ -248,14 +248,18 @@ await new Promise((resolve) => setTimeout(resolve, 800));
 <div className="switch">{register ? "Already have an account?" : "New to SRS AI?"} <button onClick={changeMode}>{register ? "Sign in" : "Create account"}</button></div></>}</div></section></main>;
 }
 
-function Sidebar({ page, navigate }) {
+function Sidebar({ page, navigate, user }) {
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z" /></svg> },
     { id: "projects", label: "Projects", icon: <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5" /></svg> },
     { id: "templates", label: "Templates", icon: <svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg> },
-    { id: "settings", label: "Settings", icon: <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" /><path d="m19.4 15 .1.1 1.1.8-1.5 2.6-1.3-.5a8 8 0 0 1-1.4.8l-.2 1.4h-3l-.2-1.4a8 8 0 0 1-1.4-.8l-1.3.5-1.5-2.6 1.1-.8a7 7 0 0 1 0-1.6l-1.1-.8 1.5-2.6 1.3.5a8 8 0 0 1 1.4-.8l.2-1.4h3l.2 1.4a8 8 0 0 1 1.4.8l1.3-.5 1.5 2.6-1.1.8a7 7 0 0 1 0 1.6Z" /></svg> }
+    { id: "notifications", label: "Notification History", icon: <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg> },
+    { id: "settings", label: "Settings", icon: <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" /><path d="m19.4 15 .1.1 1.1.8-1.5 2.6-1.3-.5a8 8 0 0 1-1.4.8l-.2 1.4h-3l-.2-1.4a8 8 0 0 1-1.4-.8l-1.3.5-1.5-2.6 1.1-.8a7 7 0 0 1 0-1.6l-1.1-.8 1.5-2.6 1.3.5a8 8 0 0 1 1.4-.8l.2-1.4h3l.2 1.4a8 8 0 0 1 1.4.8l1.3-.5 1.5 2.6-1.1.8a7 7 0 0 1 0 1.6Z" /></svg> },{ id: "help", label: "Help & Support", icon: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M9.6 9a2.5 2.5 0 1 1 4.3 1.7c-1 .9-1.9 1.3-1.9 2.8M12 17h.01" /></svg> },
+...(user?.email?.toLowerCase() === "sabeel1775@gmail.com"
+  ? [{ id: "admin-support", label: "Admin Support", icon: <svg viewBox="0 0 24 24"><path d="M12 3 3 8v2h18V8l-9-5ZM5 12v7m7-7v7m7-7v7M3 21h18" /></svg> }]
+  : [])
   ];
-  const activePage = page === "project" ? "projects" : page;
+const activePage = page === "project" ? "projects" : page;
 
   return <aside className="sidebar"><Brand /><small>WORKSPACE</small><nav aria-label="Workspace navigation">{navItems.map((item) => <button type="button" key={item.id} className={activePage === item.id ? "active" : ""} onClick={() => navigate(item.id)} aria-current={activePage === item.id ? "page" : undefined} title={item.label}><span className="nav-icon" aria-hidden="true">{item.icon}</span><span className="nav-label">{item.label}</span></button>)}</nav></aside>;
 }
@@ -263,7 +267,9 @@ function Sidebar({ page, navigate }) {
 function MobileNav({ page, navigate }) { return <nav className="mobile-nav" aria-label="Main navigation"><button className={page === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}><i>⌂</i><span>Dashboard</span></button><button className={page === "projects" || page === "project" ? "active" : ""} onClick={() => navigate("projects")}><i>▤</i><span>Projects</span></button><button className={page === "templates" ? "active" : ""} onClick={() => navigate("templates")}><i>▱</i><span>Templates</span></button><button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}><i>⚙</i><span>Settings</span></button></nav>; }
 
 function ProjectOverviewTools({ openProject }) {
-  const [projects, setProjects] = useState([]); const [message, setMessage] = useState("");
+  const [projects, setProjects] = useState([]); 
+  const [message, setMessage] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState(null);
   const load = useCallback(async () => { try { setProjects(await api("/api/projects?sort=updated")); } catch (error) { setMessage(error.message); } }, []);
   useEffect(() => { load(); }, [load]);
   const action = async (project, actionName) => { try { const result = await api(`/api/projects/${project.id}/${actionName}`, { method: "POST" }); if (actionName === "duplicate") return openProject(result.id); setMessage(actionName === "favorite" ? (result.is_favorite ? "Project added to favorites." : "Project removed from favorites.") : "Project archived."); await load(); } catch (error) { setMessage(error.message); } };
@@ -348,7 +354,18 @@ function WorkspaceSettingsPanel() {
 );
 }
 
-function Layout({ user, page, navigate, logout, children }) { return <div className={`app ${localStorage.getItem("srs-theme") || "light"}`}><Sidebar {...{ page, navigate }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span><details className="topbar-profile"><summary aria-label={`Profile: ${user.name}`}><span className="topbar-avatar" style={{ backgroundImage: profileGradient(user.id ?? user.email ?? user.name) }}>{user.profile_image || user.profilePhoto ? <img src={user.profile_image || user.profilePhoto} alt="" /> : user.name?.trim().charAt(0).toUpperCase() || "U"}</span><span className="topbar-profile-name">{user.name}</span><span className="topbar-profile-caret" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg></span></summary><div className="topbar-profile-menu"><span>{user.email}</span><button type="button" onClick={() => navigate("settings")}>Settings</button><button type="button" onClick={logout}>Sign out</button></div></details></header>{page === "dashboard" && <div className="overview-shell"><ProjectOverviewTools openProject={(id) => navigate("project", id)} /></div>}{children}</main><MobileNav {...{ page, navigate }} /></div>; }
+function Layout({ user, page, navigate, logout, children }) { return <div className={`app ${localStorage.getItem("srs-theme") || "light"}`}><Sidebar {...{ page, navigate, user }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span><button
+  type="button"
+  className="notification-bell"
+  onClick={() => navigate("notifications")}
+  aria-label="Open notification history"
+  title="Notifications"
+>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+  </svg>
+  <span className="notification-dot" />
+</button><details className="topbar-profile"><summary aria-label={`Profile: ${user.name}`}><span className="topbar-avatar" style={{ backgroundImage: profileGradient(user.id ?? user.email ?? user.name) }}>{user.profile_image || user.profilePhoto ? <img src={user.profile_image || user.profilePhoto} alt="" /> : user.name?.trim().charAt(0).toUpperCase() || "U"}</span><span className="topbar-profile-name">{user.name}</span><span className="topbar-profile-caret" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg></span></summary><div className="topbar-profile-menu"><span>{user.email}</span><button type="button" onClick={() => navigate("settings")}>Settings</button><button type="button" onClick={logout}>Sign out</button></div></details></header>{page === "dashboard" && <div className="overview-shell"><ProjectOverviewTools openProject={(id) => navigate("project", id)} /></div>}{children}</main><MobileNav {...{ page, navigate }} /></div>; }
 
 function Dashboard({ user, navigate, openProject, logout, page }) {const [loading, setLoading] = useState(true);
 const [projectProgress, setProjectProgress] = useState(0);
@@ -383,7 +400,7 @@ const load = useCallback(async () => {
   const duplicate = async (project) => { try { const copy = await api(`/api/projects/${project.id}/duplicate`, { method: "POST" }); openProject(copy.id); } catch (err) { setError(err.message); } };
   const archive = async (project) => { try { await api(`/api/projects/${project.id}/archive`, { method: "POST" }); await load(); } catch (err) { setError(err.message); } };
   const favorite = async (project) => { try { await api(`/api/projects/${project.id}/favorite`, { method: "POST" }); await load(); } catch (err) { setError(err.message); } };
-  return <Layout user={user} page={page} navigate={navigate} logout={logout}><section className="content"><div className="welcome"><div><small>YOUR WORKSPACE</small><h1>Good to see you, {user.name.split(" ")[0]}.</h1><p>Turn ideas into requirements your team can build with confidence.</p></div><button className="primary-btn" onClick={() => setShowCreate(true)}>＋ New project</button></div><div className="dashboard-stats" aria-label="Workspace statistics"><article><strong>{stats.total}</strong><span>Total projects</span></article><article><strong>{stats.draft}</strong><span>Draft projects</span></article><article><strong>{stats.completed}</strong><span>Completed</span></article><article><strong>{stats.exported}</strong><span>Documents exported</span></article></div>{error && <div className="message error">{error}</div>}<div className="toolbar"><input placeholder="Search projects…" value={search} onChange={(e) => setSearch(e.target.value)} /><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="in_progress">In progress</option><option value="complete">Complete</option><option value="archived">Archived</option></select><select value={sort} onChange={(e) => setSort(e.target.value)}><option value="updated">Recently updated</option><option value="name">Name</option></select></div><section className="panel">{loading ? <GenerateLoader
+  return <Layout user={user} page="dashboard" navigate={navigate} logout={logout}><section className="content"><div className="welcome"><div><small>YOUR WORKSPACE</small><h1>Good to see you, {user.name.split(" ")[0]}.</h1><p>Turn ideas into requirements your team can build with confidence.</p></div><button className="primary-btn" onClick={() => setShowCreate(true)}>＋ New project</button></div><div className="dashboard-stats" aria-label="Workspace statistics"><article><strong>{stats.total}</strong><span>Total projects</span></article><article><strong>{stats.draft}</strong><span>Draft projects</span></article><article><strong>{stats.completed}</strong><span>Completed</span></article><article><strong>{stats.exported}</strong><span>Documents exported</span></article></div>{error && <div className="message error">{error}</div>}<div className="toolbar"><input placeholder="Search projects…" value={search} onChange={(e) => setSearch(e.target.value)} /><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="in_progress">In progress</option><option value="complete">Complete</option><option value="archived">Archived</option></select><select value={sort} onChange={(e) => setSort(e.target.value)}><option value="updated">Recently updated</option><option value="name">Name</option></select></div><section className="panel">{loading ? <GenerateLoader
   label={`Opening your project... ${projectProgress}%`}
   detail="Loading your requirements workspace…"
   progress={projectProgress}
@@ -618,6 +635,21 @@ const changeTheme = (nextTheme) => {
   localStorage.setItem("srs-theme", nextTheme);
   document.documentElement.setAttribute("data-theme", nextTheme);
 };
+const connectGoogle = async () => {
+  try {
+    setNote("Connecting to Google...");
+
+    const result = await api("/api/google/connect");
+
+    if (!result.authorizationUrl) {
+      throw new Error("Google authorization URL was not received.");
+    }
+
+    window.location.href = result.authorizationUrl;
+  } catch (err) {
+    setNote(err.message);
+  }
+};
 const changePassword = async (event) => {
   event.preventDefault();
 
@@ -828,7 +860,7 @@ setNote("Profile photo removed.");
       )}
     </div>
 
-    <div>
+  <div className="photo-actions">
      <label className="photo-btn">
     <svg
   className="photo-camera-icon"
@@ -878,7 +910,6 @@ reader.readAsDataURL(file);          }}
 <button
 type="button"
 className="remove-photo-btn"
-style={{ marginLeft: "10px" }}
 onClick={() => setShowRemovePhotoModal(true)}
 
 >
@@ -984,9 +1015,7 @@ aria-hidden="true"
     <button
       type="button"
       className="secondary-btn connect-google-btn"
-      onClick={() =>
-        setNote("Google connection will be enabled after backend setup.")
-      }
+      onClick={connectGoogle}
     >
       <span className="connect-icon">↗</span>
       Connect Google
@@ -1002,7 +1031,7 @@ aria-hidden="true"
 
 <section className="panel padded">
   <h2>Change password</h2>
-```
+
 <form onSubmit={changePassword}><label>Current password<input required type="password" value={password.currentPassword} onChange={(e) => setPassword({ ...password, currentPassword: e.target.value })} /></label><label>New password<input required minLength="8" type="password" value={password.newPassword} onChange={(e) => setPassword({ ...password, newPassword: e.target.value })} /></label><button className="primary-btn full">Change password</button></form></section><section className="panel padded danger-panel">
   <h2>Danger zone</h2>
 
@@ -1039,7 +1068,604 @@ aria-hidden="true"
 </section>
 </Layout>;
 }
+function NotificationHistory({ user, navigate, logout }) {
+  return (
+    <Layout user={user} page="notifications" navigate={navigate} logout={logout}>
+      <section className="content">
+        <div className="welcome">
+          <div>
+            <small>YOUR WORKSPACE</small>
+            <h1>Notification History</h1>
+            <p>Stay updated with important project activities and reminders.</p>
+          </div>
+        </div>
 
+        <section className="panel padded">
+          <div className="section-head">
+            <div>
+              <h2>All notifications</h2>
+              <p>Your recent notifications will appear here.</p>
+            </div>
+          </div>
+          <div className="empty">
+            <b>No notifications yet</b>
+            <span>You're all caught up!</span>
+          </div>
+        </section>
+      </section>
+    </Layout>
+  );
+}
+function HelpSupport({ user, navigate, logout }) {
+    const [ticketForm, setTicketForm] = useState({
+    subject: "",
+    category: "",
+    priority: "Medium",
+    description: ""
+  });
+
+  const [submitting, setSubmitting] = useState(false);
+  const [tickets, setTickets] = useState([]);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [ticketDetails, setTicketDetails] = useState(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [loadingTicketDetails, setLoadingTicketDetails] = useState(false);
+  const [sendingReply, setSendingReply] = useState(false);
+  const [ticketFilter, setTicketFilter] = useState("All");
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [supportMessage, setSupportMessage] = useState("");
+  const loadTickets = async () => {
+  try {
+    setLoadingTickets(true);
+    const data = await api("/api/support/tickets");
+    setTickets(data.tickets || []);
+  } catch (error) {
+    setSupportMessage(error.message);
+  } finally {
+    setLoadingTickets(false);
+  }
+};
+const filteredTickets = tickets.filter((ticket) => {
+  if (ticketFilter === "All") return true;
+
+  if (ticketFilter === "Open") {
+    return ticket.status === "Pending " || ticket.status === "Open";
+  }
+
+  return ticket.status === ticketFilter;
+});
+const sendTicketReply = async (event) => {
+  event.preventDefault();
+
+  if (!replyMessage.trim() || !selectedTicket) return;
+
+  try {
+    setSendingReply(true);
+
+    await api(`/api/support/tickets/${selectedTicket}/replies`, {
+      method: "POST",
+      body: JSON.stringify({ message: replyMessage })
+    });
+
+    setReplyMessage("");
+    await openTicket(selectedTicket);
+  } catch (error) {
+    setSupportMessage(error.message);
+  } finally {
+    setSendingReply(false);
+  }
+};
+ const sendAdminReply = async (event) => {
+  event.preventDefault();
+
+  if (!replyMessage.trim() || !selectedTicket) return;
+
+  try {
+    setSendingReply(true);
+
+    await api(`/api/admin/support/tickets/${selectedTicket.id}/replies`, {
+      method: "POST",
+      body: JSON.stringify({ message: replyMessage })
+    });
+
+    setReplyMessage("");
+    await openAdminTicket(selectedTicket.id);
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    setSendingReply(false);
+  }
+};
+const openTicket = async (ticketId) => {
+  try {
+    setLoadingTicketDetails(true);
+    setSelectedTicket(ticketId);
+
+    const data = await api(`/api/support/tickets/${ticketId}`);
+
+    setTicketDetails(data.ticket);
+  } catch (error) {
+    setSupportMessage(error.message);
+  } finally {
+    setLoadingTicketDetails(false);
+  }
+};
+  const submitTicket = async (event) => {
+    event.preventDefault();
+
+    setSubmitting(true);
+    setSupportMessage("");
+
+    try {
+      await api("/api/support/tickets", {
+        method: "POST",
+        body: JSON.stringify(ticketForm)
+      });
+
+      setTicketForm({
+        subject: "",
+        category: "",
+        priority: "Medium",
+        description: ""
+      });
+
+      setSupportMessage("Your support ticket was submitted successfully!");
+    } catch (error) {
+      setSupportMessage(error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  useEffect(() => {
+  loadTickets();
+}, []);
+  return (
+   <Layout user={user} page="help" navigate={navigate} logout={logout}>
+      <section className="content">
+        <div className="welcome">
+          <div>
+            <small>SUPPORT CENTRE</small>
+            <h1>How can we help you?</h1>
+            <p>We're here to help you get the most out of SRS AI.</p>
+          </div>
+        </div>
+
+       <section className="panel padded support-form-card">
+  <div className="section-head">
+    <div>
+      <h2>Raise a Support Ticket</h2>
+      <p>Tell us about your issue or question.</p>
+    </div>
+  </div>
+
+  <form onSubmit={submitTicket} className="support-form">
+
+    <label>
+      Subject *
+      <input
+        type="text"
+        placeholder="e.g., Unable to generate SRS"
+        required
+        minLength={3}
+        maxLength={255}
+        value={ticketForm.subject}
+        onChange={(e) => setTicketForm({
+          ...ticketForm,
+          subject: e.target.value
+        })}
+      />
+    </label>
+
+    <div className="support-form-row">
+      <label>
+        Category *
+        <select
+          required
+          value={ticketForm.category}
+          onChange={(e) => setTicketForm({
+            ...ticketForm,
+            category: e.target.value
+          })}
+        >
+          <option value="">Select category</option>
+          <option value="Technical Support">Technical Support</option>
+          <option value="Account">Account</option>
+          <option value="Projects">Projects</option>
+          <option value="SRS Documents">SRS Documents</option>
+          <option value="Templates">Templates</option>
+          <option value="General">General</option>
+        </select>
+      </label>
+
+      <label>
+        Priority *
+        <select
+          value={ticketForm.priority}
+          onChange={(e) => setTicketForm({
+            ...ticketForm,
+            priority: e.target.value
+          })}
+        >
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+          <option value="Urgent">Urgent</option>
+        </select>
+      </label>
+    </div>
+
+    <label>
+      Description *
+      <textarea
+        placeholder="Describe your issue or request in detail..."
+        required
+        minLength={10}
+        maxLength={5000}
+        rows={5}
+        value={ticketForm.description}
+        onChange={(e) => setTicketForm({
+          ...ticketForm,
+          description: e.target.value
+        })}
+      />
+    </label>
+
+    {supportMessage && (
+      <div className="message notice">{supportMessage}</div>
+    )}
+
+    <button
+      type="submit"
+      className="primary-btn"
+      disabled={submitting}
+    >
+      {submitting ? "Submitting..." : "Submit Ticket →"}
+    </button>
+
+  </form>
+</section>
+{/* Your Tickets Section */}
+<section className="panel padded support-tickets-card">
+  <div className="section-head">
+    <div>
+      <h2>Your Tickets</h2>
+      <p>Track your support requests and responses.</p>
+    </div>
+  </div>
+ <div className="support-ticket-filters">
+  {["All", "Open", "In Progress", "Resolved", "Closed"].map((filter) => (
+    <button
+      key={filter}
+      type="button"
+      className={ticketFilter === filter ? "active" : ""}
+      onClick={() => setTicketFilter(filter)}
+    >
+      {filter}
+    </button>
+  ))}
+</div>
+{selectedTicket && (
+  <div className="support-conversation">
+    <button
+      type="button"
+      className="secondary-btn"
+      onClick={() => {
+        setSelectedTicket(null);
+        setTicketDetails(null);
+      }}
+    >
+      ← Back to Tickets
+    </button>
+
+    {loadingTicketDetails ? (
+      <p>Loading conversation...</p>
+    ) : ticketDetails ? (
+      <>
+        <div className="conversation-header">
+          <h2>{ticketDetails.subject}</h2>
+          <span>{ticketDetails.status}</span>
+        </div>
+
+        <div className="conversation-messages">
+          <div className="conversation-message">
+            <strong>Original Request</strong>
+            <p>{ticketDetails.description}</p>
+          </div>
+
+          {(ticketDetails.replies || []).map((reply) => (
+        <div
+  className={`conversation-message ${
+    reply.sender_type === "admin" ? "admin-message" : "user-message"
+  }`}
+  key={reply.id}
+>
+              <strong>
+                {reply.sender_type === "admin" ? "Support Team" : "You"}
+              </strong>
+              <p>{reply.message}</p>
+            </div>
+          ))}
+        </div>
+
+        <form onSubmit={sendTicketReply} className="conversation-reply">
+          <textarea
+            rows={3}
+            placeholder="Write your reply..."
+            value={replyMessage}
+            onChange={(e) => setReplyMessage(e.target.value)}
+            required
+          />
+
+          <button
+            type="submit"
+            className="primary-btn"
+            disabled={sendingReply}
+          >
+            {sendingReply ? "Sending..." : "Send Reply"}
+          </button>
+        </form>
+      </>
+    ) : null}
+  </div>
+)}
+  <div className="support-ticket-list">
+    {loadingTickets ? (
+      <p>Loading your tickets...</p>
+    ) : tickets.length === 0 ? (
+      <p>You haven't submitted any support tickets yet.</p>
+    ) : (
+          filteredTickets.map((ticket) => (
+       <div
+  className="support-ticket-item"
+  key={ticket.id}
+  onClick={() => openTicket(ticket.id)}
+  style={{ cursor: "pointer" }}
+>
+          <div>
+            <h3>{ticket.subject}</h3>
+            <p>{ticket.category}</p>
+          </div>
+          <div>
+            <div className="support-ticket-badges">
+  <span className={`ticket-status status-${ticket.status.toLowerCase().replace(/\s+/g, "-")}`}>
+    {ticket.status}
+  </span>
+
+  <span className={`ticket-priority priority-${ticket.priority.toLowerCase()}`}>
+    {ticket.priority} Priority
+  </span>
+</div>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</section>
+      </section>
+    </Layout>
+  );
+}
+function AdminSupport({ user, navigate, logout }) {
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [replyMessage, setReplyMessage] = useState("");
+const [sendingReply, setSendingReply] = useState(false);
+
+  const loadAdminTickets = async () => {
+    try {
+      setLoading(true);
+      const data = await api("/api/admin/support/tickets");
+      setTickets(data.tickets || []);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+const openAdminTicket = async (ticketId) => {
+  try {
+    setLoading(true);
+    const data = await api(`/api/admin/support/tickets/${ticketId}`);
+    console.log("ADMIN TICKET DETAILS:", data.ticket);
+    setSelectedTicket(data.ticket);
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+const sendAdminReply = async (event) => {
+  event.preventDefault();
+
+  if (!replyMessage.trim() || !selectedTicket) return;
+
+  try {
+    setSendingReply(true);
+
+    await api(`/api/admin/support/tickets/${selectedTicket.id}/replies`, {
+      method: "POST",
+      body: JSON.stringify({ message: replyMessage })
+    });
+
+    setReplyMessage("");
+
+    await openAdminTicket(selectedTicket.id);
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    setSendingReply(false);
+  }
+};
+const updateAdminTicketStatus = async (status) => {
+  try {
+    await api(`/api/admin/support/tickets/${selectedTicket.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status })
+    });
+
+    await openAdminTicket(selectedTicket.id);
+    await loadAdminTickets();
+  } catch (error) {
+    setMessage(error.message);
+  }
+};
+
+const updateAdminTicketPriority = async (priority) => {
+  try {
+    await api(`/api/admin/support/tickets/${selectedTicket.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ priority })
+    });
+
+    await openAdminTicket(selectedTicket.id);
+    await loadAdminTickets();
+  } catch (error) {
+    setMessage(error.message);
+  }
+};  useEffect(() => {
+    loadAdminTickets();
+  }, []);
+
+  return (
+   <Layout user={user} page="admin-support" navigate={navigate} logout={logout}>
+   <section className="content admin-support">
+          <div className="welcome">
+          <div>
+            <small>ADMIN PANEL</small>
+            <h1>Support Dashboard</h1>
+            <p>Manage support tickets submitted by users.</p>
+          </div>
+        </div>
+
+        <section className="panel padded">
+        {selectedTicket ? (
+  <>
+    <button
+     className="primary-btn"
+      onClick={() => setSelectedTicket(null)}
+    >
+      ← Back to Tickets
+    </button>
+
+    <h2>{selectedTicket.subject}</h2>
+    <p>Ticket #{selectedTicket.id}</p>
+    <p>Status: {selectedTicket.status}</p>
+    <label>
+  Update Status
+  <select
+    value={selectedTicket.status}
+    onChange={(e) => updateAdminTicketStatus(e.target.value)}
+  >
+    <option value="Pending">Pending</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Resolved">Resolved</option>
+    <option value="Closed">Closed</option>
+  </select>
+</label>
+    <p>Priority: {selectedTicket.priority}</p>
+<label>
+  Update Priority
+  <select
+    value={selectedTicket.priority}
+    onChange={(e) => updateAdminTicketPriority(e.target.value)}
+  >
+    <option value="Low">Low</option>
+    <option value="Medium">Medium</option>
+    <option value="High">High</option>
+    <option value="Urgent">Urgent</option>
+  </select>
+</label>
+    <div className="ticket-description">
+  <h3>Developer's Message</h3>
+  <p>{selectedTicket.description}</p>
+</div>
+<div className="conversation-messages">
+ 
+  <h3>Conversation History</h3>
+
+  {(selectedTicket.replies || []).map((reply) => (
+    <div
+      className={`conversation-message ${
+        reply.sender_type === "admin"
+          ? "admin-message"
+          : "user-message"
+      }`}
+      key={reply.id}
+    >
+      <strong>
+        {reply.sender_type === "admin" ? "Support Team" : "Developer"}
+      </strong>
+
+      <p>{reply.message}</p>
+    </div>
+  ))}
+</div>
+<form onSubmit={sendAdminReply} className="conversation-reply">
+  <textarea
+    rows={3}
+placeholder="Reply to the user..."    value={replyMessage}
+    onChange={(e) => setReplyMessage(e.target.value)}
+    required
+  />
+
+  <button
+    type="submit"
+    className="primary-btn"
+    disabled={sendingReply}
+  >
+    {sendingReply ? "Sending..." : "Send Reply"}
+  </button>
+</form>
+  </>
+) : (
+  <h2>All Support Tickets</h2>
+)}
+
+        {message && <div className="message notice">{message}</div>}
+{!selectedTicket && (
+  <>
+    {loading ? (
+      <p>Loading tickets...</p>
+    ) : tickets.length === 0 ? (
+      <p>No support tickets found.</p>
+    ) : (
+      tickets.map((ticket) => (
+        <div
+          className="admin-ticket-card"
+          key={ticket.id}
+          onClick={() => openAdminTicket(ticket.id)}
+          style={{ cursor: "pointer" }}
+        >
+          <div className="admin-ticket-header">
+            <div>
+              <h3>{ticket.subject}</h3>
+              <p>Ticket #{ticket.id}</p>
+            </div>
+
+            <span className="ticket-status">{ticket.status}</span>
+          </div>
+
+          <div className="admin-ticket-user">
+            <strong>{ticket.users?.name || "Unknown User"}</strong>
+            <span>{ticket.users?.email || "No email"}</span>
+          </div>
+
+          <div className="admin-ticket-details">
+            <span>{ticket.category}</span>
+            <span>{ticket.priority} Priority</span>
+          </div>
+        </div>
+      ))
+    )}
+  </>
+)}
+        </section>
+      </section>
+    </Layout>
+  );
+}
 function Modal({ title, onClose, children }) { return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={(event) => event.stopPropagation()}><div className="section-head"><h2>{title}</h2><button className="icon-btn" onClick={onClose}>×</button></div>{children}</div></div>; }
 
 export default function App() {
@@ -1051,5 +1677,8 @@ export default function App() {
   if (page === "project" && projectId) return <Project user={session} id={projectId} navigate={navigate} logout={logout} />;
   if (page === "templates") return <Templates user={session} navigate={navigate} logout={logout} />;
   if (page === "settings") return <Settings user={session} setUser={setSession} navigate={navigate} logout={logout} />;
+  if (page === "notifications") return <NotificationHistory user={session} navigate={navigate} logout={logout} />;
+  if (page === "help") return <HelpSupport user={session} navigate={navigate} logout={logout} />;
+  if (page === "admin-support") return <AdminSupport user={session} navigate={navigate} logout={logout} />;
   return <DashboardV2 user={session} navigate={navigate} logout={logout} openProject={(id) => navigate("project", id)} page={page === "projects" ? "projects" : "dashboard"} />;
 }

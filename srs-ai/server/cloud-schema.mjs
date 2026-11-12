@@ -118,7 +118,33 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAU
 CREATE INDEX IF NOT EXISTS project_activities_project_id_idx ON project_activities(project_id);
 CREATE INDEX IF NOT EXISTS feedback_user_id_idx ON feedback(user_id);
 CREATE INDEX IF NOT EXISTS project_requirements_project_id_idx ON project_requirements(project_id);
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  subject VARCHAR(255) NOT NULL,
+  category VARCHAR(100) NOT NULL,
+  description TEXT NOT NULL,
+  status VARCHAR(30) NOT NULL DEFAULT 'Pending',
+  priority VARCHAR(20) NOT NULL DEFAULT 'Medium',
+  created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS support_replies (
+  id SERIAL PRIMARY KEY,
+  ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  sender_type VARCHAR(20) NOT NULL DEFAULT 'user',
+  message TEXT NOT NULL,
+  created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS support_tickets_user_id_idx ON support_tickets(user_id);
+CREATE INDEX IF NOT EXISTS support_tickets_status_idx ON support_tickets(status);
+CREATE INDEX IF NOT EXISTS support_replies_ticket_id_idx ON support_replies(ticket_id);
+CREATE INDEX IF NOT EXISTS support_replies_user_id_idx ON support_replies(user_id);
 `;
+
 
 try {
   await client.connect();

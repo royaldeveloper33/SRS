@@ -136,6 +136,9 @@ model users {
   question_answers     question_answers[]
   team_invitations     team_invitations[]
   feedback             feedback[]
+  support_tickets  support_tickets[]
+support_replies  support_replies[]
+notifications notifications[]
 }
 
 model code_artifacts {
@@ -247,4 +250,50 @@ model translations {
   content     Json?
   created_at  DateTime? @default(now()) @db.Timestamp(6)
   projects    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+model support_tickets {
+  id          Int       @id @default(autoincrement())
+  user_id     Int
+  subject     String    @db.VarChar(255)
+  category    String    @db.VarChar(100)
+  description String
+  status      String    @default("Pending") @db.VarChar(30)
+  priority    String    @default("Medium") @db.VarChar(20)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+
+  users       users             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  replies     support_replies[]
+
+  @@index([user_id])
+  @@index([status])
+}
+
+model support_replies {
+  id          Int       @id @default(autoincrement())
+  ticket_id   Int
+  user_id     Int
+  sender_type String    @default("user") @db.VarChar(20)
+  message     String
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+
+  tickets     support_tickets @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+  users       users           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([ticket_id])
+  @@index([user_id])
+}
+model notifications {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  title       String   @db.VarChar(255)
+  message     String
+  type        String   @db.VarChar(50)
+  is_read     Boolean  @default(false)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  user        users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, is_read])
+  @@index([created_at])
 }

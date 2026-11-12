@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import bcrypt from "bcryptjs";
 import { OAuth2Client } from "google-auth-library";
+import { google } from "googleapis";
 import crypto from "node:crypto";
 import PDFDocument from "pdfkit";
 import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
@@ -10,6 +11,116 @@ import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client.ts";
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const googleOAuthClient = new google.auth.OAuth2(
+  process.env.GOOGLE_OAUTH_CLIENT_ID,
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
+const GOOGLE_SCOPES = [
+  "openid",
+  "email",
+  "profile",
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/calendar.events"
+];
+const TOKEN_ENCRYPTION_KEY = Buffer.from(
+  process.env.GOOGLE_TOKEN_ENCRYPTION_KEY || "",
+  "hex"
+);
+
+if (TOKEN_ENCRYPTION_KEY.length !== 32) {
+  throw new Error("GOOGLE_TOKEN_ENCRYPTION_KEY must be a 32-byte hex key");
+}
+const encryptGoogleToken = (token) => {
+  if (!token) return null;
+
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv(
+    "aes-256-gcm",
+    TOKEN_ENCRYPTION_KEY,
+    iv
+  );
+
+  const encrypted = Buffer.concat([
+    cipher.update(token, "utf8"),
+    cipher.final()
+  ]);
+
+  const authTag = cipher.getAuthTag();
+
+  return [
+    iv.toString("hex"),
+    authTag.toString("hex"),
+    encrypted.toString("hex")
+  ].join(":");
+};
+
+const decryptGoogleToken = (encryptedToken) => {
+  if (!encryptedToken) return null;
+
+  const [ivHex, authTagHex, encryptedHex] = encryptedToken.split(":");
+
+  const decipher = crypto.createDecipheriv(
+    "aes-256-gcm",
+    TOKEN_ENCRYPTION_KEY,
+    Buffer.from(ivHex, "hex")
+  );
+
+  decipher.setAuthTag(Buffer.from(authTagHex, "hex"));
+
+  return Buffer.concat([
+    decipher.update(Buffer.from(encryptedHex, "hex")),
+    decipher.final()
+  ]).toString("utf8");
+};
+const createGoogleOAuthState = (userId) => {
+  const payload = Buffer.from(JSON.stringify({
+    userId,
+    nonce: crypto.randomBytes(16).toString("hex"),
+    expiresAt: Date.now() + 10 * 60 * 1000
+  })).toString("base64url");
+
+  const signature = crypto
+    .createHmac("sha256", TOKEN_ENCRYPTION_KEY)
+    .update(payload)
+    .digest("base64url");
+
+  return `${payload}.${signature}`;
+};
+
+const verifyGoogleOAuthState = (state) => {
+  try {
+    const [payload, signature] = state.split(".");
+
+    if (!payload || !signature) return null;
+
+    const expectedSignature = crypto
+      .createHmac("sha256", TOKEN_ENCRYPTION_KEY)
+      .update(payload)
+      .digest();
+
+    const receivedSignature = Buffer.from(signature, "base64url");
+
+    if (
+      receivedSignature.length !== expectedSignature.length ||
+      !crypto.timingSafeEqual(receivedSignature, expectedSignature)
+    ) {
+      return null;
+    }
+
+    const data = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8")
+    );
+
+    if (!Number.isInteger(data.userId) || data.expiresAt < Date.now()) {
+      return null;
+    }
+
+    return data.userId;
+  } catch {
+    return null;
+  }
+};
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is missing from .env");
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
@@ -68,6 +179,16 @@ const requireAuth = (request, response, next) => {
   } catch {
     return response.status(401).json({ error: "Authentication required" });
   }
+};
+const requireAdmin = (request, response, next) => {
+  const adminEmail = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  const userEmail = String(request.user.email || "").trim().toLowerCase();
+
+  if (!adminEmail || userEmail !== adminEmail) {
+    return response.status(403).json({ error: "Admin access required" });
+  }
+
+  return next();
 };
 const handle = (fn) => (request, response, next) => Promise.resolve(fn(request, response, next)).catch((error) => {
   console.error(`Request failed: ${request.method} ${request.originalUrl}`, error);
@@ -210,6 +331,307 @@ app.post("/api/auth/google", handle(async (request, response) => {
 app.get("/api/health", (_request, response) => response.json({ message: "SRS AI API is running" }));
 
 app.use("/api", requireAuth);
+app.get("/api/google/connect", (request, response) => {
+  const state = createGoogleOAuthState(request.user.id);
+
+  const authorizationUrl = googleOAuthClient.generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    scope: GOOGLE_SCOPES,
+    state
+  });
+
+  return response.json({ authorizationUrl });
+});
+// Help & Support API routes
+app.post("/api/support/tickets", handle(async (request, response) => {
+ const { subject, category, priority, description } = request.body;
+
+  if (
+    typeof subject !== "string" ||
+    subject.trim().length < 3 ||
+    subject.trim().length > 255
+  ) {
+    return response.status(400).json({
+      error: "Subject must be between 3 and 255 characters"
+    });
+  }
+
+  if (
+    typeof category !== "string" ||
+    category.trim().length < 2 ||
+    category.trim().length > 100
+  ) {
+    return response.status(400).json({
+      error: "Please provide a valid category"
+    });
+  }
+    if (
+    typeof category !== "string" ||
+    category.trim().length < 2 ||
+    category.trim().length > 100
+  ) {
+    return response.status(400).json({
+      error: "Please provide a valid category"
+    });
+  }
+
+  // ADD HERE
+  if (!["Low", "Medium", "High", "Urgent"].includes(priority)) {
+    return response.status(400).json({
+      error: "Please provide a valid priority"
+    });
+  }
+
+  if (
+    typeof description !== "string" ||
+    description.trim().length < 10 ||
+    description.trim().length > 5000
+  ) {
+    return response.status(400).json({
+      error: "Description must be between 10 and 5,000 characters"
+    });
+  }
+
+  const ticket = await prisma.support_tickets.create({
+   data: {
+  user_id: request.user.id,
+  subject: subject.trim(),
+  category: category.trim(),
+  priority,
+  description: description.trim()
+}
+  });
+
+  return response.status(201).json({
+    message: "Support ticket created successfully",
+    ticket
+  });
+}));
+app.get("/api/support/tickets", handle(async (request, response) => {
+  const tickets = await prisma.support_tickets.findMany({
+    where: {
+      user_id: request.user.id
+    },
+    orderBy: {
+      created_at: "desc"
+    }
+  });
+
+  return response.json({ tickets });
+}));
+app.get("/api/support/tickets/:id", handle(async (request, response) => {
+  const ticketId = parseId(request.params.id);
+
+  if (!ticketId) {
+    return response.status(400).json({ error: "Invalid ticket ID" });
+  }
+
+  const ticket = await prisma.support_tickets.findFirst({
+    where: {
+      id: ticketId,
+      user_id: request.user.id
+    },
+    include: {
+      replies: {
+        orderBy: {
+          created_at: "asc"
+        }
+      }
+    }
+  });
+
+  if (!ticket) {
+    return response.status(404).json({ error: "Ticket not found" });
+  }
+
+  return response.json({ ticket });
+}));
+app.post("/api/support/tickets/:id/replies", handle(async (request, response) => {
+  const ticketId = parseId(request.params.id);
+  const message = typeof request.body.message === "string"
+    ? request.body.message.trim()
+    : "";
+
+  if (!ticketId) {
+    return response.status(400).json({ error: "Invalid ticket ID" });
+  }
+
+  if (message.length < 2 || message.length > 5000) {
+    return response.status(400).json({
+      error: "Reply must be between 2 and 5,000 characters"
+    });
+  }
+
+  const ticket = await prisma.support_tickets.findFirst({
+    where: {
+      id: ticketId,
+      user_id: request.user.id
+    }
+  });
+
+  if (!ticket) {
+    return response.status(404).json({ error: "Ticket not found" });
+  }
+
+  const reply = await prisma.support_replies.create({
+    data: {
+      ticket_id: ticketId,
+      user_id: request.user.id,
+      sender_type: "user",
+      message
+    }
+  });
+
+  await prisma.support_tickets.update({
+    where: { id: ticketId },
+    data: { updated_at: new Date() }
+  });
+
+  return response.status(201).json({
+    message: "Reply submitted successfully",
+    reply
+  });
+}));
+app.get("/api/admin/support/tickets", requireAdmin, handle(async (request, response) => {
+  const tickets = await prisma.support_tickets.findMany({
+    include: {
+      users: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      }
+    },
+    orderBy: {
+      created_at: "desc"
+    }
+  });
+
+  return response.json({ tickets });
+}));
+app.get("/api/admin/support/tickets/:id", requireAdmin, handle(async (request, response) => {
+  const ticketId = parseId(request.params.id);
+
+  if (!ticketId) {
+    return response.status(400).json({ error: "Invalid ticket ID" });
+  }
+
+  const ticket = await prisma.support_tickets.findUnique({
+    where: { id: ticketId },
+    include: {
+      users: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      replies: {
+        orderBy: {
+          created_at: "asc"
+        }
+      }
+    }
+  });
+
+  if (!ticket) {
+    return response.status(404).json({ error: "Ticket not found" });
+  }
+
+  return response.json({ ticket });
+}));
+app.post("/api/admin/support/tickets/:id/replies", requireAdmin, handle(async (request, response) => {
+  const ticketId = parseId(request.params.id);
+  const message = typeof request.body.message === "string"
+    ? request.body.message.trim()
+    : "";
+
+  if (!ticketId) {
+    return response.status(400).json({ error: "Invalid ticket ID" });
+  }
+
+  if (message.length < 2 || message.length > 5000) {
+    return response.status(400).json({
+      error: "Reply must be between 2 and 5,000 characters"
+    });
+  }
+
+  const ticket = await prisma.support_tickets.findUnique({
+    where: { id: ticketId }
+  });
+
+  if (!ticket) {
+    return response.status(404).json({ error: "Ticket not found" });
+  }
+
+  const reply = await prisma.support_replies.create({
+    data: {
+      ticket_id: ticketId,
+      user_id: request.user.id,
+      sender_type: "admin",
+      message
+    }
+  });
+
+  await prisma.support_tickets.update({
+    where: { id: ticketId },
+    data: { updated_at: new Date() }
+  });
+
+  return response.status(201).json({
+    message: "Admin reply submitted successfully",
+    reply
+  });
+}));
+app.patch("/api/admin/support/tickets/:id", requireAdmin, handle(async (request, response) => {
+  const ticketId = parseId(request.params.id);
+  const { status, priority } = request.body;
+
+  if (!ticketId) {
+    return response.status(400).json({ error: "Invalid ticket ID" });
+  }
+
+const allowedStatuses = ["Pending", "In Progress", "Resolved", "Closed"];
+const allowedPriorities = ["Low", "Medium", "High", "Urgent"];
+
+  if (status !== undefined && !allowedStatuses.includes(status)) {
+    return response.status(400).json({ error: "Invalid ticket status" });
+  }
+
+  if (priority !== undefined && !allowedPriorities.includes(priority)) {
+    return response.status(400).json({ error: "Invalid ticket priority" });
+  }
+
+  if (status === undefined && priority === undefined) {
+    return response.status(400).json({
+      error: "Provide a status or priority to update"
+    });
+  }
+
+  const ticket = await prisma.support_tickets.findUnique({
+    where: { id: ticketId }
+  });
+
+  if (!ticket) {
+    return response.status(404).json({ error: "Ticket not found" });
+  }
+
+  const updatedTicket = await prisma.support_tickets.update({
+    where: { id: ticketId },
+    data: {
+      ...(status !== undefined && { status }),
+      ...(priority !== undefined && { priority }),
+      updated_at: new Date()
+    }
+  });
+
+  return response.json({
+    message: "Ticket updated successfully",
+    ticket: updatedTicket
+  });
+}));
 app.get("/api/me", handle(async (request, response) => response.json(publicUser(await prisma.users.findUniqueOrThrow({ where: { id: request.user.id } })))));
 app.get("/api/dashboard/stats", handle(async (request, response) => {
   const [statuses, exported] = await Promise.all([
