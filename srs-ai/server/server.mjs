@@ -632,6 +632,107 @@ const allowedPriorities = ["Low", "Medium", "High", "Urgent"];
     ticket: updatedTicket
   });
 }));
+// Notifications API
+app.get("/api/notifications", handle(async (request, response) => {
+  const notifications = await prisma.notifications.findMany({
+    where: {
+      user_id: request.user.id
+    },
+    orderBy: {
+      created_at: "desc"
+    },
+    take: 100
+  });
+
+  const unreadCount = await prisma.notifications.count({
+    where: {
+      user_id: request.user.id,
+      is_read: false
+    }
+  });
+
+  return response.json({
+    notifications,
+    unreadCount
+  });
+}));
+// Mark a notification as read
+app.patch("/api/notifications/:id/read", handle(async (request, response) => {
+  const notificationId = Number(request.params.id);
+
+  if (!Number.isInteger(notificationId) || notificationId <= 0) {
+    return response.status(400).json({
+      error: "Invalid notification ID"
+    });
+  }
+
+  const result = await prisma.notifications.updateMany({
+    where: {
+      id: notificationId,
+      user_id: request.user.id
+    },
+    data: {
+      is_read: true
+    }
+  });
+
+  if (result.count === 0) {
+    return response.status(404).json({
+      error: "Notification not found"
+    });
+  }
+
+  return response.json({
+    message: "Notification marked as read"
+  });
+}));
+// Mark all notifications as read
+app.patch("/api/notifications/read-all", handle(async (request, response) => {
+  const result = await prisma.notifications.updateMany({
+    where: {
+      user_id: request.user.id,
+      is_read: false
+    },
+    data: {
+      is_read: true
+    }
+  });
+
+  return response.json({
+    message: "All notifications marked as read",
+    updatedCount: result.count
+  });
+}));
+// Delete a notification
+app.delete("/api/notifications/:id", handle(async (request, response) => {
+  const notificationId = Number(request.params.id);
+
+  if (!Number.isInteger(notificationId) || notificationId <= 0) {
+    return response.status(400).json({
+      error: "Invalid notification ID"
+    });
+  }
+
+  const result = await prisma.notifications.deleteMany({
+    where: {
+      id: notificationId,
+      user_id: request.user.id
+    }
+  });
+
+  if (result.count === 0) {
+    return response.status(404).json({
+      error: "Notification not found"
+    });
+  }
+
+  return response.json({
+    message: "Notification deleted successfully"
+  });
+}));
+app.use("/api", (_request, response) =>
+  response.status(404).json({ error: "API route not found" })
+);
 app.get("/api/me", handle(async (request, response) => response.json(publicUser(await prisma.users.findUniqueOrThrow({ where: { id: request.user.id } })))));
 app.get("/api/dashboard/stats", handle(async (request, response) => {
   const [statuses, exported] = await Promise.all([
