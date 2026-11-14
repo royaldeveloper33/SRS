@@ -730,9 +730,6 @@ app.delete("/api/notifications/:id", handle(async (request, response) => {
     message: "Notification deleted successfully"
   });
 }));
-app.use("/api", (_request, response) =>
-  response.status(404).json({ error: "API route not found" })
-);
 app.get("/api/me", handle(async (request, response) => response.json(publicUser(await prisma.users.findUniqueOrThrow({ where: { id: request.user.id } })))));
 app.get("/api/dashboard/stats", handle(async (request, response) => {
   const [statuses, exported] = await Promise.all([
