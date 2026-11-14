@@ -1068,7 +1068,69 @@ aria-hidden="true"
 </section>
 </Layout>;
 }
+
 function NotificationHistory({ user, navigate, logout }) {
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await api("/api/notifications");
+
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unreadCount || 0);
+    } catch (err) {
+      setError(err.message || "Unable to load notifications");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const markAsRead = async (id) => {
+    try {
+      await api(`/api/notifications/${id}/read`, {
+        method: "PATCH"
+      });
+
+      await fetchNotifications();
+    } catch (err) {
+      setError(err.message || "Unable to mark notification as read");
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await api("/api/notifications/read-all", {
+        method: "PATCH"
+      });
+
+      await fetchNotifications();
+    } catch (err) {
+      setError(err.message || "Unable to mark all notifications as read");
+    }
+  };
+
+  const deleteNotification = async (id) => {
+    try {
+      await api(`/api/notifications/${id}`, {
+        method: "DELETE"
+      });
+
+      await fetchNotifications();
+    } catch (err) {
+      setError(err.message || "Unable to delete notification");
+    }
+  };
+
   return (
     <Layout user={user} page="notifications" navigate={navigate} logout={logout}>
       <section className="content">
@@ -1084,13 +1146,71 @@ function NotificationHistory({ user, navigate, logout }) {
           <div className="section-head">
             <div>
               <h2>All notifications</h2>
-              <p>Your recent notifications will appear here.</p>
+              <p>
+                {unreadCount} unread notification{unreadCount !== 1 ? "s" : ""}
+              </p>
             </div>
+
+            {unreadCount > 0 && (
+              <button className="btn-secondary" onClick={markAllAsRead}>
+                Mark all as read
+              </button>
+            )}
           </div>
-          <div className="empty">
-            <b>No notifications yet</b>
-            <span>You're all caught up!</span>
-          </div>
+
+          {loading ? (
+            <div className="empty">
+              <b>Loading notifications...</b>
+            </div>
+          ) : error ? (
+            <div className="empty">
+              <b>{error}</b>
+              <button className="btn-secondary" onClick={fetchNotifications}>
+                Try again
+              </button>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="empty">
+              <b>No notifications yet</b>
+              <span>You're all caught up!</span>
+            </div>
+          ) : (
+            <div className="notification-list">
+              {notifications.map((notification) => (
+                <div
+                  className={`notification-item ${notification.is_read ? "" : "unread"}`}
+                  key={notification.id}
+                >
+                  <div className="notification-content">
+                    <b>{notification.title}</b>
+                    <p>{notification.message}</p>
+                    <small>
+                      {notification.type} ·{" "}
+                      {new Date(notification.created_at).toLocaleString()}
+                    </small>
+                  </div>
+
+                  <div className="notification-actions">
+                    {!notification.is_read && (
+                      <button
+                        className="btn-secondary"
+                        onClick={() => markAsRead(notification.id)}
+                      >
+                        Mark as read
+                      </button>
+                    )}
+
+                    <button
+                      className="btn-secondary"
+                      onClick={() => deleteNotification(notification.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </section>
     </Layout>
