@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import "./App.css";
 import "./theme.css";
 
@@ -354,7 +355,28 @@ function WorkspaceSettingsPanel() {
 );
 }
 
-function Layout({ user, page, navigate, logout, children }) { return <div className={`app ${localStorage.getItem("srs-theme") || "light"}`}><Sidebar {...{ page, navigate, user }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span><button
+function Layout({ user, page, navigate, logout, children }) { 
+  const [topbarUnreadCount, setTopbarUnreadCount] = useState(0);
+
+useEffect(() => {
+  const loadUnreadCount = async () => {
+    try {
+      const data = await api("/api/notifications");
+      setTopbarUnreadCount(data.unreadCount || 0);
+    } catch (err) {
+      console.error("Unable to load notification count:", err);
+    }
+  };
+
+  loadUnreadCount();
+
+  window.addEventListener("notifications-updated", loadUnreadCount);
+
+  return () => {
+    window.removeEventListener("notifications-updated", loadUnreadCount);
+  };
+}, []);
+  return <div className={`app ${localStorage.getItem("srs-theme") || "light"}`}><Sidebar {...{ page, navigate, user }} /><main className="main"><header className="topbar"><Brand /><span className="topbar-date">{new Date().toLocaleDateString(undefined, { dateStyle: "full" })}</span><button
   type="button"
   className="notification-bell"
   onClick={() => navigate("notifications")}
@@ -364,7 +386,9 @@ function Layout({ user, page, navigate, logout, children }) { return <div classN
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
   </svg>
+{topbarUnreadCount > 0 && (
   <span className="notification-dot" />
+)}
 </button><details className="topbar-profile"><summary aria-label={`Profile: ${user.name}`}><span className="topbar-avatar" style={{ backgroundImage: profileGradient(user.id ?? user.email ?? user.name) }}>{user.profile_image || user.profilePhoto ? <img src={user.profile_image || user.profilePhoto} alt="" /> : user.name?.trim().charAt(0).toUpperCase() || "U"}</span><span className="topbar-profile-name">{user.name}</span><span className="topbar-profile-caret" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg></span></summary><div className="topbar-profile-menu"><span>{user.email}</span><button type="button" onClick={() => navigate("settings")}>Settings</button><button type="button" onClick={logout}>Sign out</button></div></details></header>{page === "dashboard" && <div className="overview-shell"><ProjectOverviewTools openProject={(id) => navigate("project", id)} /></div>}{children}</main><MobileNav {...{ page, navigate }} /></div>; }
 
 function Dashboard({ user, navigate, openProject, logout, page }) {const [loading, setLoading] = useState(true);
@@ -443,13 +467,142 @@ function DashboardV2({ user, navigate, openProject, logout, page }) {
 }
 
 function DocumentDeliveryTools({ document, project }) {
-  const [message, setMessage] = useState(""); const [versions, setVersions] = useState([]); const [showVersions, setShowVersions] = useState(false);
-  const content = document?.content?.text || ""; const words = content.trim().split(/\s+/).filter(Boolean).length;
-  const share = async () => { if (!document) return setMessage("Save an SRS before creating a review link."); try { const result = await api(`/api/documents/${document.id}/share`, { method: "POST" }); await navigator.clipboard.writeText(result.url); setMessage("Read-only review link copied to clipboard."); } catch (error) { setMessage(error.message); } };
-  const history = async () => { if (!document) return; if (showVersions) return setShowVersions(false); try { setVersions(await api(`/api/documents/${document.id}/versions`)); setShowVersions(true); } catch (error) { setMessage(error.message); } };
-  return <section className="panel padded document-delivery"><div className="section-head"><div><small>DOCUMENT DELIVERY</small><h2>Cover, contents and review</h2><p>Prepare your SRS for a client-ready handoff.</p></div></div><div className="delivery-grid"><div><b>Cover page details</b><span>{project.name} · {project.client_name || "Client not added"}</span><span>Version {document?.version || 1} · {date(document?.updated_at || project.updated_at)}</span></div><div><b>Table of contents</b><span>Overview · Requirements · Acceptance criteria</span><span>Risks · Assumptions · Exclusions</span></div><div><b>Document insight</b><span>{words.toLocaleString()} words · {words ? Math.max(1, Math.ceil(words / 200)) : 0} min read</span><span>{document ? "Ready for export" : "Draft not created"}</span></div></div><div className="actions"><button className="outline" onClick={share}>Share read-only link</button><button className="outline" onClick={history} disabled={!document}>{showVersions ? "Hide comparison" : "Compare versions"}</button><button className="outline" onClick={() => window.print()}>Print SRS</button></div>{message && <div className="message notice">{message}</div>}{showVersions && <div className="version-compare"><b>Version comparison</b>{versions.length ? versions.map((version, index) => <div key={version.id}><span>Version {version.version} · {date(version.created_at)}</span><small>{index === 0 ? "Current saved version" : "Earlier saved version"}</small></div>) : <span>No previous versions to compare yet.</span>}</div>}</section>;
-}
+  const [message, setMessage] = useState("");
+  const [versions, setVersions] = useState([]);
+  const [showVersions, setShowVersions] = useState(false);
 
+  const content = document?.content?.text || "";
+  const words = content.trim().split(/\s+/).filter(Boolean).length;
+
+  const share = async () => {
+    if (!document) {
+      return setMessage("Save an SRS before creating a review link.");
+    }
+
+    try {
+      const result = await api(`/api/documents/${document.id}/share`, {
+        method: "POST"
+      });
+
+      await navigator.clipboard.writeText(result.url);
+      setMessage("Read-only review link copied to clipboard.");
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  const exportToDrive = async () => {
+    if (!document) {
+      return setMessage("Save an SRS before exporting.");
+    }
+
+    try {
+      setMessage("Uploading PDF to Google Drive...");
+
+      const result = await api(
+        `/api/documents/${document.id}/export?format=pdf&destination=drive`
+      );
+
+      if (result.file?.webViewLink) {
+        window.open(result.file.webViewLink, "_blank");
+      }
+
+      setMessage("PDF exported to Google Drive successfully.");
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  const history = async () => {
+    if (!document) return;
+
+    if (showVersions) {
+      return setShowVersions(false);
+    }
+
+    try {
+      setVersions(await api(`/api/documents/${document.id}/versions`));
+      setShowVersions(true);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  return (
+    <section className="panel padded document-delivery">
+      <div className="section-head">
+        <div>
+          <small>DOCUMENT DELIVERY</small>
+          <h2>Cover, contents and review</h2>
+          <p>Prepare your SRS for a client-ready handoff.</p>
+        </div>
+      </div>
+
+      <div className="delivery-grid">
+        <div>
+          <b>Cover page details</b>
+          <span>{project.name} · {project.client_name || "Client not added"}</span>
+          <span>Version {document?.version || 1} · {date(document?.updated_at || project.updated_at)}</span>
+        </div>
+
+        <div>
+          <b>Table of contents</b>
+          <span>Overview · Requirements · Acceptance criteria</span>
+          <span>Risks · Assumptions · Exclusions</span>
+        </div>
+
+        <div>
+          <b>Document insight</b>
+          <span>
+            {words.toLocaleString()} words · {words ? Math.max(1, Math.ceil(words / 200)) : 0} min read
+          </span>
+          <span>{document ? "Ready for export" : "Draft not created"}</span>
+        </div>
+      </div>
+
+      <div className="actions">
+        <button className="outline" onClick={share}>
+          Share read-only link
+        </button>
+
+        <button className="outline" onClick={exportToDrive} disabled={!document}>
+          Export PDF to Google Drive
+        </button>
+
+        <button className="outline" onClick={history} disabled={!document}>
+          {showVersions ? "Hide comparison" : "Compare versions"}
+        </button>
+
+        <button className="outline" onClick={() => window.print()}>
+          Print SRS
+        </button>
+      </div>
+
+      {message && <div className="message notice">{message}</div>}
+
+      {showVersions && (
+        <div className="version-compare">
+          <b>Version comparison</b>
+
+          {versions.length ? (
+            versions.map((version, index) => (
+              <div key={version.id}>
+                <span>
+                  Version {version.version} · {date(version.created_at)}
+                </span>
+                <small>
+                  {index === 0 ? "Current saved version" : "Earlier saved version"}
+                </small>
+              </div>
+            ))
+          ) : (
+            <span>No previous versions to compare yet.</span>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
 const emptyProjectPlan = () => ({ risks: [], assumptions: "", exclusions: "", approvalStatus: "draft", reviewerName: "", approvalNote: "", approvedAt: "" });
 
 function ProjectGovernancePanel({ plan, onChange, onSave, busy }) {
@@ -478,6 +631,28 @@ function ProjectManagementPanel(props) {
 }
 
 function ProjectManagementContent({ project, document, onEdit, onApprove, onFavorite, onDuplicate, onArchive, onActivity, onAddQuestion, activity, busy }) {
+    const [calendarBusy, setCalendarBusy] = useState(false);
+
+  const syncCalendar = async () => {
+    setCalendarBusy(true);
+    setFeedback("");
+
+    try {
+      const result = await api(`/api/projects/${project.id}/calendar`, {
+        method: "POST"
+      });
+
+      setFeedback(result.message);
+
+   if (result.event?.htmlLink) {
+  window.open("https://calendar.google.com/calendar/u/0/r/day", "_blank");
+}
+    } catch (error) {
+      setFeedback(error.message);
+    } finally {
+      setCalendarBusy(false);
+    }
+  };
   const deadline = project.deadline ? new Date(project.deadline).toLocaleDateString(undefined, { dateStyle: "medium" }) : "Not set";
   const requirements = project.project_requirements || [];
   const [showRequirements, setShowRequirements] = useState(false); const [localRequirements, setLocalRequirements] = useState(requirements); const [requirement, setRequirement] = useState({ title: "", description: "", type: "Functional", priority: "Medium", status: "Planned", acceptance_criteria: "" }); const [addingRequirement, setAddingRequirement] = useState(false); const [feedback, setFeedback] = useState("");
@@ -490,7 +665,14 @@ function ProjectManagementContent({ project, document, onEdit, onApprove, onFavo
   const addRequirement = async (event) => { event.preventDefault(); setAddingRequirement(true); try { const saved = await api(`/api/projects/${project.id}/requirements`, { method: "POST", body: JSON.stringify(requirement) }); setLocalRequirements([...localRequirements, saved]); setRequirement({ title: "", description: "", type: "Functional", priority: "Medium", status: "Planned", acceptance_criteria: "" }); setFeedback(`${saved.code} added to requirements.`); } catch (error) { setFeedback(error.message); } finally { setAddingRequirement(false); } };
   const copySrs = async () => { const text = project.srs_documents?.[0]?.content?.text || ""; if (!text) return setFeedback("Create or save an SRS before copying it."); try { await navigator.clipboard.writeText(text); setFeedback("SRS copied to your clipboard."); } catch { setFeedback("Copy failed. Please select the SRS text manually."); } };
   const wordCount = (project.srs_documents?.[0]?.content?.text || "").trim().split(/\s+/).filter(Boolean).length;
-  return <><section className="project-intelligence"><article className="panel health-card"><div className="health-score"><strong>{score}</strong><span>/100</span></div><div><small>PROJECT HEALTH</small><h2>{score === 100 ? "Ready to deliver" : score >= 60 ? "Nearly ready" : "Needs more detail"}</h2><p>Complete the remaining items to strengthen the project plan.</p></div><div className="health-checks">{checks.map((check) => <span className={check.complete ? "done" : ""} key={check.label}>{check.complete ? "✓" : "○"} {check.label}</span>)}</div></article><article className={`panel deadline-card ${days !== null && days <= 3 ? "urgent" : ""}`}><small>DELIVERY DATE</small><h2>{deadline}</h2><p>{deadlineWarning}</p><button className="text-btn" onClick={onEdit}>Change deadline</button></article><article className="panel document-tools"><small>DOCUMENT TOOLS</small><h2>{wordCount.toLocaleString()} words</h2><p>{wordCount ? `${Math.max(1, Math.ceil(wordCount / 200))} min read` : "Start your SRS draft"}</p><div><button className="text-btn" onClick={copySrs}>Copy SRS</button><button className="text-btn" onClick={() => window.print()}>Print</button></div></article></section>{feedback && <div className="message notice">{feedback}</div>}<section className="panel project-management"><div className="project-management-main"><div><small>PROJECT CONTROL CENTER</small><h2>Manage project details</h2><p>Client: <b>{project.client_name || "Not added"}</b> · Deadline: <b>{deadline}</b></p></div><div className="project-meta"><span><b>Created</b>{date(project.created_at)}</span><span><b>Last updated</b>{date(project.updated_at)}</span><span><b>Status</b>{project.status === "complete" ? "Approved" : project.status.replace("_", " ")}</span></div></div><div className="project-control-actions"><button className="outline" onClick={onEdit} disabled={Boolean(busy)}>Edit details</button><button className="outline" onClick={onFavorite} disabled={Boolean(busy)}>{project.is_favorite ? "★ Favorited" : "☆ Favorite"}</button><button className="outline" onClick={onDuplicate} disabled={Boolean(busy)}>Duplicate</button><button className="outline" onClick={onActivity} disabled={Boolean(busy)}>Activity</button>{project.status !== "complete" && <button className="primary-btn" onClick={onApprove} disabled={Boolean(busy)}>✓ Mark approved</button>}<button className="text-btn archive-btn" onClick={onArchive} disabled={Boolean(busy)}>Archive project</button></div></section><section className="panel padded requirements-panel"><div className="section-head"><div><small>REQUIREMENTS REGISTER</small><h2>Manual requirements</h2><p>Add feature requirements without using AI.</p></div><button className="outline" onClick={() => setShowRequirements(!showRequirements)}>{showRequirements ? "Close" : "＋ Add requirement"}</button></div>{showRequirements && <form className="requirement-form" onSubmit={addRequirement}><label>Requirement title<input required value={requirement.title} placeholder="For example: Users can reset their password" onChange={(event) => setRequirement({ ...requirement, title: event.target.value })} /></label><label>Type<select value={requirement.type} onChange={(event) => setRequirement({ ...requirement, type: event.target.value })}><option>Functional</option><option>Non-functional</option></select></label><label>Priority<select value={requirement.priority} onChange={(event) => setRequirement({ ...requirement, priority: event.target.value })}><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label><label>Status<select value={requirement.status} onChange={(event) => setRequirement({ ...requirement, status: event.target.value })}><option>Planned</option><option>In progress</option><option>Completed</option></select></label><label className="wide">Description<textarea rows="2" value={requirement.description} onChange={(event) => setRequirement({ ...requirement, description: event.target.value })} /></label><label className="wide">Acceptance criteria<textarea rows="2" placeholder="How do we know this feature works?" value={requirement.acceptance_criteria} onChange={(event) => setRequirement({ ...requirement, acceptance_criteria: event.target.value })} /></label><button className="primary-btn" disabled={addingRequirement}>{addingRequirement ? "Adding…" : "Add requirement"}</button></form>}{localRequirements.length ? <div className="requirements-list">{localRequirements.map((item) => <article key={item.id}><span className="requirement-code">{item.code}</span><div><b>{item.title}</b><small>{item.type} · {item.priority} priority · {item.status}</small>{item.acceptance_criteria && <p>Acceptance: {item.acceptance_criteria}</p>}</div></article>)}</div> : <div className="empty">No manual requirements yet. Add one to build a clear feature list.</div>}</section>{activity && <section className="panel padded activity-panel"><div className="section-head"><div><small>RECENT ACTIVITY</small><h2>Project timeline</h2></div><button className="text-btn" onClick={onActivity}>Hide</button></div>{activity.length ? <div className="activity-list">{activity.map((item) => <div key={item.id}><i>•</i><span><b>{item.detail || item.action}</b><small>{date(item.created_at)}</small></span></div>)}</div> : <div className="empty">No project activity recorded yet.</div>}</section>}</>;
+  return <><section className="project-intelligence"><article className="panel health-card"><div className="health-score"><strong>{score}</strong><span>/100</span></div><div><small>PROJECT HEALTH</small><h2>{score === 100 ? "Ready to deliver" : score >= 60 ? "Nearly ready" : "Needs more detail"}</h2><p>Complete the remaining items to strengthen the project plan.</p></div><div className="health-checks">{checks.map((check) => <span className={check.complete ? "done" : ""} key={check.label}>{check.complete ? "✓" : "○"} {check.label}</span>)}</div></article><article className={`panel deadline-card ${days !== null && days <= 3 ? "urgent" : ""}`}><small>DELIVERY DATE</small><h2>{deadline}</h2><p>{deadlineWarning}</p><button className="text-btn" onClick={onEdit}>Change deadline</button>
+<button
+  className="text-btn"
+  onClick={syncCalendar}
+  disabled={calendarBusy || !project.deadline}
+>
+  {calendarBusy ? "Syncing…" : "Add to Google Calendar"}
+</button></article><article className="panel document-tools"><small>DOCUMENT TOOLS</small><h2>{wordCount.toLocaleString()} words</h2><p>{wordCount ? `${Math.max(1, Math.ceil(wordCount / 200))} min read` : "Start your SRS draft"}</p><div><button className="text-btn" onClick={copySrs}>Copy SRS</button><button className="text-btn" onClick={() => window.print()}>Print</button></div></article></section>{feedback && <div className="message notice">{feedback}</div>}<section className="panel project-management"><div className="project-management-main"><div><small>PROJECT CONTROL CENTER</small><h2>Manage project details</h2><p>Client: <b>{project.client_name || "Not added"}</b> · Deadline: <b>{deadline}</b></p></div><div className="project-meta"><span><b>Created</b>{date(project.created_at)}</span><span><b>Last updated</b>{date(project.updated_at)}</span><span><b>Status</b>{project.status === "complete" ? "Approved" : project.status.replace("_", " ")}</span></div></div><div className="project-control-actions"><button className="outline" onClick={onEdit} disabled={Boolean(busy)}>Edit details</button><button className="outline" onClick={onFavorite} disabled={Boolean(busy)}>{project.is_favorite ? "★ Favorited" : "☆ Favorite"}</button><button className="outline" onClick={onDuplicate} disabled={Boolean(busy)}>Duplicate</button><button className="outline" onClick={onActivity} disabled={Boolean(busy)}>Activity</button>{project.status !== "complete" && <button className="primary-btn" onClick={onApprove} disabled={Boolean(busy)}>✓ Mark approved</button>}<button className="text-btn archive-btn" onClick={onArchive} disabled={Boolean(busy)}>Archive project</button></div></section><section className="panel padded requirements-panel"><div className="section-head"><div><small>REQUIREMENTS REGISTER</small><h2>Manual requirements</h2><p>Add feature requirements without using AI.</p></div><button className="outline" onClick={() => setShowRequirements(!showRequirements)}>{showRequirements ? "Close" : "＋ Add requirement"}</button></div>{showRequirements && <form className="requirement-form" onSubmit={addRequirement}><label>Requirement title<input required value={requirement.title} placeholder="For example: Users can reset their password" onChange={(event) => setRequirement({ ...requirement, title: event.target.value })} /></label><label>Type<select value={requirement.type} onChange={(event) => setRequirement({ ...requirement, type: event.target.value })}><option>Functional</option><option>Non-functional</option></select></label><label>Priority<select value={requirement.priority} onChange={(event) => setRequirement({ ...requirement, priority: event.target.value })}><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label><label>Status<select value={requirement.status} onChange={(event) => setRequirement({ ...requirement, status: event.target.value })}><option>Planned</option><option>In progress</option><option>Completed</option></select></label><label className="wide">Description<textarea rows="2" value={requirement.description} onChange={(event) => setRequirement({ ...requirement, description: event.target.value })} /></label><label className="wide">Acceptance criteria<textarea rows="2" placeholder="How do we know this feature works?" value={requirement.acceptance_criteria} onChange={(event) => setRequirement({ ...requirement, acceptance_criteria: event.target.value })} /></label><button className="primary-btn" disabled={addingRequirement}>{addingRequirement ? "Adding…" : "Add requirement"}</button></form>}{localRequirements.length ? <div className="requirements-list">{localRequirements.map((item) => <article key={item.id}><span className="requirement-code">{item.code}</span><div><b>{item.title}</b><small>{item.type} · {item.priority} priority · {item.status}</small>{item.acceptance_criteria && <p>Acceptance: {item.acceptance_criteria}</p>}</div></article>)}</div> : <div className="empty">No manual requirements yet. Add one to build a clear feature list.</div>}</section>{activity && <section className="panel padded activity-panel"><div className="section-head"><div><small>RECENT ACTIVITY</small><h2>Project timeline</h2></div><button className="text-btn" onClick={onActivity}>Hide</button></div>{activity.length ? <div className="activity-list">{activity.map((item) => <div key={item.id}><i>•</i><span><b>{item.detail || item.action}</b><small>{date(item.created_at)}</small></span></div>)}</div> : <div className="empty">No project activity recorded yet.</div>}</section>}</>;
 }
 
 function Project({ user, id, navigate, logout }) {
@@ -611,6 +793,18 @@ function Templates({ user, navigate, logout }) {
 }
 
 function Settings({ user, setUser, navigate, logout }) {
+  const [googleConnected, setGoogleConnected] = useState(false);
+const [googleEmail, setGoogleEmail] = useState("");
+
+useEffect(() => {
+  api("/api/me")
+    .then((result) => {
+      setGoogleConnected(Boolean(result.google_connected));
+      setGoogleEmail(result.google_email || "");
+    })
+    .catch((err) => console.error("Google status check failed:", err));
+}, []);
+
   const [showRemovePhotoModal, setShowRemovePhotoModal] = useState(false);
   const [profile, setProfile] = useState({
   name: user.name,
@@ -650,6 +844,25 @@ const connectGoogle = async () => {
     setNote(err.message);
   }
 };
+const disconnectGoogle = async () => {
+  if (!window.confirm("Are you sure you want to disconnect your Google account?")) {
+    return;
+  }
+
+  try {
+    setNote("Disconnecting Google...");
+
+    await api("/api/google/disconnect", {
+      method: "POST"
+    });
+
+    setGoogleConnected(false);
+    setGoogleEmail("");
+    setNote("Google account disconnected successfully.");
+  } catch (err) {
+    setNote(err.message || "Failed to disconnect Google.");
+  }
+};
 const changePassword = async (event) => {
   event.preventDefault();
 
@@ -672,6 +885,8 @@ const changePassword = async (event) => {
 const [profilePhoto, setProfilePhoto] = useState(
   user.profile_image || user.profilePhoto || ""
 ); const [password, setPassword] = useState({ currentPassword: "", newPassword: "" }); const [note, setNote] = useState("");
+   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+   const [showNewPassword, setShowNewPassword] = useState(false);
 {
 };
 const saveProfile = async (event) => {
@@ -707,10 +922,15 @@ const saveProfile = async (event) => {
       ...next,
       profilePhoto: next.profile_image || profilePhoto
     };
+// Keep the image in application memory, not sessionStorage.
+const sessionUser = {
+  ...updated,
+  profile_image: "",
+  profilePhoto: ""
+};
 
-    sessionStorage.setItem("srs-session", JSON.stringify(updated));
-    setUser(updated);
-
+sessionStorage.setItem("srs-session", JSON.stringify(sessionUser));
+setUser(updated);
     setNote("Profile saved successfully!");
 
   } catch (err) {
@@ -1002,25 +1222,35 @@ aria-hidden="true"
 
     <div className="google-account-text">
       <strong>Google</strong>
-      <span>Connect your Google account to sign in faster.</span>
+   <span>
+  {googleConnected
+    ? `Connected as ${googleEmail}`
+    : "Connect your Google account to use Drive and Calendar."}
+</span>
     </div>
   </div>
 
   <div className="google-account-actions">
-    <span className="google-status">
-      <span className="google-status-dot"></span>
-      Not connected
-    </span>
+  <span className="google-status">
+  <span
+    className="google-status-dot"
+    style={{
+      background: googleConnected ? "#22c55e" : "#ef4444"
+    }}
+  ></span>
+  {googleConnected ? "Connected" : "Not connected"}
+</span>
 
-    <button
-      type="button"
-      className="secondary-btn connect-google-btn"
-      onClick={connectGoogle}
-    >
-      <span className="connect-icon">↗</span>
-      Connect Google
-    </button>
-  </div>
+<button
+  type="button"
+className={`secondary-btn connect-google-btn ${googleConnected ? "disconnect-google-btn" : "connect-google-btn"}`}  onClick={googleConnected ? disconnectGoogle : connectGoogle}
+>
+  <span className="connect-icon">
+    {googleConnected ? "" : "↗"}
+  </span>
+  {googleConnected ? "Disconnect Google" : "Connect Google"}
+</button>
+</div>
 </div>
 
 <div className="google-account-note">
@@ -1032,7 +1262,54 @@ aria-hidden="true"
 <section className="panel padded">
   <h2>Change password</h2>
 
-<form onSubmit={changePassword}><label>Current password<input required type="password" value={password.currentPassword} onChange={(e) => setPassword({ ...password, currentPassword: e.target.value })} /></label><label>New password<input required minLength="8" type="password" value={password.newPassword} onChange={(e) => setPassword({ ...password, newPassword: e.target.value })} /></label><button className="primary-btn full">Change password</button></form></section><section className="panel padded danger-panel">
+<form onSubmit={changePassword}>
+  <label>
+    Current password
+    <div className="password-input-wrapper">
+      <input
+        required
+        type={showCurrentPassword ? "text" : "password"}
+        value={password.currentPassword}
+        onChange={(e) =>
+          setPassword({ ...password, currentPassword: e.target.value })
+        }
+      />
+      <button
+        type="button"
+        className="password-toggle-btn"
+        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+        aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+      >
+     {showCurrentPassword ? "🙈" : "👁️"}
+      </button>
+    </div>
+  </label>
+
+  <label>
+    New password
+    <div className="password-input-wrapper">
+      <input
+        required
+        minLength="8"
+        type={showNewPassword ? "text" : "password"}
+        value={password.newPassword}
+        onChange={(e) =>
+          setPassword({ ...password, newPassword: e.target.value })
+        }
+      />
+      <button
+        type="button"
+        className="password-toggle-btn"
+        onClick={() => setShowNewPassword(!showNewPassword)}
+        aria-label={showNewPassword ? "Hide password" : "Show password"}
+      >
+       {showNewPassword ? "🙈" : "👁️"}
+      </button>
+    </div>
+  </label>
+
+  <button className="primary-btn full">Change password</button>
+</form></section><section className="panel padded danger-panel">
   <h2>Danger zone</h2>
 
   <p className="muted">
@@ -1100,6 +1377,7 @@ function NotificationHistory({ user, navigate, logout }) {
       await api(`/api/notifications/${id}/read`, {
         method: "PATCH"
       });
+      window.dispatchEvent(new Event("notifications-updated"));
 
       await fetchNotifications();
     } catch (err) {
@@ -1112,7 +1390,7 @@ function NotificationHistory({ user, navigate, logout }) {
       await api("/api/notifications/read-all", {
         method: "PATCH"
       });
-
+window.dispatchEvent(new Event("notifications-updated"));
       await fetchNotifications();
     } catch (err) {
       setError(err.message || "Unable to mark all notifications as read");
@@ -1124,7 +1402,7 @@ function NotificationHistory({ user, navigate, logout }) {
       await api(`/api/notifications/${id}`, {
         method: "DELETE"
       });
-
+window.dispatchEvent(new Event("notifications-updated"));
       await fetchNotifications();
     } catch (err) {
       setError(err.message || "Unable to delete notification");
@@ -1152,10 +1430,13 @@ function NotificationHistory({ user, navigate, logout }) {
             </div>
 
             {unreadCount > 0 && (
-              <button className="btn-secondary" onClick={markAllAsRead}>
-                Mark all as read
-              </button>
-            )}
+              <button
+  className="notification-mark-all-btn"
+  onClick={markAllAsRead}
+>
+  ✓ Mark all as read
+</button>
+        )}
           </div>
 
           {loading ? (
@@ -1567,13 +1848,141 @@ const openTicket = async (ticketId) => {
 }
 function AdminSupport({ user, navigate, logout }) {
   const [tickets, setTickets] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [selectedAdminUser, setSelectedAdminUser] = useState(null);
+  const [adminUserDetailsLoading, setAdminUserDetailsLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [adminProjects, setAdminProjects] = useState([]);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [selectedAdminProject, setSelectedAdminProject] = useState(null);
+  const [adminProjectDetailsLoading, setAdminProjectDetailsLoading] = useState(false);
+  const [adminDocuments, setAdminDocuments] = useState([]);
+  const [documentSearch, setDocumentSearch] = useState("");
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [selectedAdminDocument, setSelectedAdminDocument] = useState(null);
+  const [adminDocumentDetailsLoading, setAdminDocumentDetailsLoading] = useState(false);
+  const [stats, setStats] = useState({
+  totalUsers: 0,
+  totalProjects: 0,
+  totalDocuments: 0,
+  totalTickets: 0,
+  openTickets: 0
+});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [replyMessage, setReplyMessage] = useState("");
 const [sendingReply, setSendingReply] = useState(false);
+const loadAdminProjects = async () => {
+  try {
+    setProjectsLoading(true);
 
-  const loadAdminTickets = async () => {
+    const data = await api("/api/admin/projects");
+    setAdminProjects(data.projects || []);
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    setProjectsLoading(false);
+  }
+};
+const loadAdminDocuments = async () => {
+  try {
+    setDocumentsLoading(true);
+
+    const data = await api("/api/admin/documents");
+    setAdminDocuments(data.documents || []);
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    setDocumentsLoading(false);
+  }
+};
+const openAdminDocument = async (documentId) => {
+  try {
+    setAdminDocumentDetailsLoading(true);
+
+    const data = await api(`/api/admin/documents/${documentId}`);
+
+    setSelectedAdminDocument(data.document);
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    setAdminDocumentDetailsLoading(false);
+  }
+};
+const openAdminProject = async (projectId) => {
+  try {
+    setAdminProjectDetailsLoading(true);
+
+    const data = await api(`/api/admin/projects/${projectId}`);
+    setSelectedAdminProject(data.project);
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    setAdminProjectDetailsLoading(false);
+  }
+};
+const loadAdminUsers = async () => {
+  try {
+    setUsersLoading(true);
+
+    const data = await api("/api/admin/users");
+    setAdminUsers(data.users || []);
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    setUsersLoading(false);
+  }
+};
+const openAdminUser = async (userId) => {
+  try {
+    setAdminUserDetailsLoading(true);
+
+    const data = await api(`/api/admin/users/${userId}`);
+    setSelectedAdminUser(data.user);
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    setAdminUserDetailsLoading(false);
+  }
+};
+const updateAdminUserStatus = async () => {
+  if (!selectedAdminUser) return;
+
+  const newStatus = !selectedAdminUser.is_active;
+
+  try {
+    const data = await api(
+      `/api/admin/users/${selectedAdminUser.id}/status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: newStatus })
+      }
+    );
+
+    setSelectedAdminUser((previous) => ({
+      ...previous,
+      is_active: data.user.is_active
+    }));
+
+    await loadAdminUsers();
+    setMessage("Account status updated successfully.");
+  } catch (error) {
+    setMessage(error.message);
+  }
+};
+const loadAdminStats = async () => {
+  try {
+    const data = await api("/api/admin/dashboard/stats");
+    setStats(data);
+  } catch (error) {
+    setMessage(error.message);
+  }
+};
+
+const loadAdminTickets = async () => {
     try {
       setLoading(true);
       const data = await api("/api/admin/support/tickets");
@@ -1644,9 +2053,13 @@ const updateAdminTicketPriority = async (priority) => {
   } catch (error) {
     setMessage(error.message);
   }
-};  useEffect(() => {
-    loadAdminTickets();
-  }, []);
+};useEffect(() => {
+  loadAdminTickets();
+  loadAdminStats();
+  loadAdminUsers();
+  loadAdminProjects();
+  loadAdminDocuments();
+}, []);
 
   return (
    <Layout user={user} page="admin-support" navigate={navigate} logout={logout}>
@@ -1658,7 +2071,378 @@ const updateAdminTicketPriority = async (priority) => {
             <p>Manage support tickets submitted by users.</p>
           </div>
         </div>
+<div className="admin-stats-grid">
+  <div className="admin-stat-card">
+    <span>Total Users</span>
+    <h2>{stats.totalUsers}</h2>
+  </div>
+    <div className="admin-stat-card">
+    <span>Total Projects</span>
+    <h2>{stats.totalProjects}</h2>
+  </div>
 
+  <div className="admin-stat-card">
+    <span>Total Documents</span>
+    <h2>{stats.totalDocuments}</h2>
+  </div>
+
+  <div className="admin-stat-card">
+    <span>Total Tickets</span>
+    <h2>{stats.totalTickets}</h2>
+  </div>
+
+  <div className="admin-stat-card">
+    <span>Open Tickets</span>
+    <h2>{stats.openTickets}</h2>
+  </div>
+</div>
+<section className="panel padded admin-users-panel">
+  <div className="section-head">
+    <div>
+      <h2>User Management</h2>
+      <p>View and search registered users.</p>
+    </div>
+  </div>
+
+  <input
+    type="text"
+    placeholder="Search by name or email..."
+    value={userSearch}
+    onChange={(e) => setUserSearch(e.target.value)}
+  />
+{adminUserDetailsLoading && <p>Loading user details...</p>}
+
+{selectedAdminUser && (
+  <div className="admin-user-details">
+    <button
+      type="button"
+      onClick={() => setSelectedAdminUser(null)}
+    >
+      ← Back to Users
+    </button>
+
+    <h2>{selectedAdminUser.name}</h2>
+  <p>Email: {selectedAdminUser.email}</p>
+
+<p>
+  Account Status:
+  <strong>
+    {selectedAdminUser.is_active ? "Active" : "Deactivated"}
+  </strong>
+</p>
+
+<div style={{ marginBottom: "16px" }}>
+  <button
+    type="button"
+    onClick={updateAdminUserStatus}
+  >
+    {selectedAdminUser.is_active
+      ? "Deactivate Account"
+      : "Activate Account"}
+  </button>
+</div>
+ <p>
+  Joined: {selectedAdminUser.created_at
+    ? new Date(selectedAdminUser.created_at).toLocaleDateString()
+    : "N/A"}
+</p>
+    <p>
+      Last Login: {selectedAdminUser.last_login_at
+        ? new Date(selectedAdminUser.last_login_at).toLocaleString()
+        : "Never"}
+    </p>
+
+    <div className="admin-stats-grid">
+      <div className="admin-stat-card">
+        <span>Total Projects</span>
+        <h2>{selectedAdminUser.totalProjects}</h2>
+      </div>
+      <div className="admin-stat-card">
+        <span>Total Documents</span>
+        <h2>{selectedAdminUser.totalDocuments}</h2>
+      </div>
+    </div>
+
+    <h3>Projects</h3>
+
+    {selectedAdminUser.projects.length === 0 ? (
+      <p>No projects found.</p>
+    ) : (
+      selectedAdminUser.projects.map((project) => (
+        <div className="admin-user-card" key={project.id}>
+          <div>
+            <h3>{project.name}</h3>
+            <p>Status: {project.status}</p>
+            <p>Documents: {project.srs_documents.length}</p>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+)}
+
+  {usersLoading ? (
+    <p>Loading users...</p>
+  ) : (
+    <div className="admin-users-list">
+      {adminUsers
+        .filter((item) =>
+          `${item.name} ${item.email}`
+            .toLowerCase()
+            .includes(userSearch.toLowerCase())
+        )
+        .map((item) => (
+<div
+  className="admin-user-card"
+  key={item.id}
+  onClick={() => openAdminUser(item.id)}
+  style={{ cursor: "pointer" }}
+>            <div>
+              <h3>{item.name}</h3>
+              <p>{item.email}</p>
+              <small>
+                Joined: {new Date(item.created_at).toLocaleDateString()}
+              </small>
+            </div>
+          </div>
+        ))}
+    </div>
+  )}
+</section>
+<section className="panel padded admin-users-panel">
+  {selectedAdminProject ? (
+    <div className="admin-user-details">
+      <button
+        type="button"
+        onClick={() => setSelectedAdminProject(null)}
+      >
+        ← Back to Projects
+      </button>
+
+      <h2>{selectedAdminProject.name}</h2>
+
+      <h3>Project Information</h3>
+
+      <p>Owner: {selectedAdminProject.users?.name}</p>
+      <p>Email: {selectedAdminProject.users?.email}</p>
+      <p>Client Name: {selectedAdminProject.client_name || "N/A"}</p>
+      <p>Project Type: {selectedAdminProject.project_type}</p>
+      <p>Status: {selectedAdminProject.status}</p>
+      <p>Progress: {selectedAdminProject.progress}%</p>
+
+      <p>
+        Deadline: {selectedAdminProject.deadline
+          ? new Date(selectedAdminProject.deadline).toLocaleDateString()
+          : "Not set"}
+      </p>
+
+      <h3>Client Idea / Description</h3>
+      <p>{selectedAdminProject.client_idea || "No description available."}</p>
+
+      <h3>Target Users</h3>
+      <p>{selectedAdminProject.target_users || "Not specified"}</p>
+
+      <h3>Technologies</h3>
+      <p>{selectedAdminProject.technologies || "Not specified"}</p>
+
+      <h3>Notes</h3>
+      <p>{selectedAdminProject.notes || "No notes available."}</p>
+
+      <h3>SRS Documents</h3>
+
+      {selectedAdminProject.srs_documents.length === 0 ? (
+        <p>No documents found.</p>
+      ) : (
+        selectedAdminProject.srs_documents.map((document) => (
+          <div
+  className="admin-user-card"
+  key={document.id}
+  onClick={() => openAdminDocument(document.id)}
+  style={{ cursor: "pointer" }}
+>
+            <h3>{document.title}</h3>
+            <p>Version: {document.version || 1}</p>
+            <small>
+              Created: {document.created_at
+                ? new Date(document.created_at).toLocaleDateString()
+                : "N/A"}
+            </small>
+          </div>
+        ))
+      )}
+    </div>
+  ) : (
+    <>
+      <div className="section-head">
+        <div>
+          <h2>Project Monitoring</h2>
+          <p>View and monitor projects created by all users.</p>
+        </div>
+      </div>
+
+      <input
+        type="text"
+        placeholder="Search by project name or owner..."
+        value={projectSearch}
+        onChange={(e) => setProjectSearch(e.target.value)}
+      />
+
+      {adminProjectDetailsLoading && <p>Loading project details...</p>}
+
+      {projectsLoading ? (
+        <p>Loading projects...</p>
+      ) : (
+        <div className="admin-users-list">
+          {adminProjects
+            .filter((project) =>
+              `${project.name} ${project.users?.name || ""} ${project.users?.email || ""}`
+                .toLowerCase()
+                .includes(projectSearch.toLowerCase())
+            )
+            .map((project) => (
+              <div
+                className="admin-user-card"
+                key={project.id}
+                onClick={() => openAdminProject(project.id)}
+                style={{ cursor: "pointer" }}
+              >
+                <div>
+                  <h3>{project.name}</h3>
+                  <p>Owner: {project.users?.name || "Unknown"}</p>
+                  <p>Email: {project.users?.email || "N/A"}</p>
+                  <p>Status: {project.status}</p>
+                  <p>Progress: {project.progress}%</p>
+                  <p>Documents: {project._count.srs_documents}</p>
+                  <small>
+                    Deadline: {project.deadline
+                      ? new Date(project.deadline).toLocaleDateString()
+                      : "Not set"}
+                  </small>
+                  <br />
+                  <small>
+                    Created: {project.created_at
+                      ? new Date(project.created_at).toLocaleDateString()
+                      : "N/A"}
+                  </small>
+                  <p><strong>Click to view details →</strong></p>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+    </>
+  )}
+</section>
+  <section className="panel padded admin-users-panel">
+  {selectedAdminDocument ? (
+    <div className="admin-user-details">
+      <button
+        type="button"
+        onClick={() => setSelectedAdminDocument(null)}
+      >
+        ← Back to Documents
+      </button>
+
+      <h2>{selectedAdminDocument.title}</h2>
+
+      <h3>Document Information</h3>
+      <p>Project: {selectedAdminDocument.projects?.name || "Unknown"}</p>
+      <p>Owner: {selectedAdminDocument.projects?.users?.name || "Unknown"}</p>
+      <p>Email: {selectedAdminDocument.projects?.users?.email || "N/A"}</p>
+      <p>Version: {selectedAdminDocument.version || 1}</p>
+
+      <h3>Full SRS Content</h3>
+
+   <div className="admin-srs-content">
+  <ReactMarkdown>
+    {typeof selectedAdminDocument.content === "string"
+      ? selectedAdminDocument.content
+      : selectedAdminDocument.content?.text || "No content available."}
+  </ReactMarkdown>
+</div>
+    </div>
+  ) : (
+    <>
+      <div className="section-head">
+        <div>
+          <h2>Document Monitoring</h2>
+          <p>View SRS documents grouped by project.</p>
+        </div>
+      </div>
+
+      <input
+        type="text"
+        placeholder="Search by project, owner or document..."
+        value={documentSearch}
+        onChange={(e) => setDocumentSearch(e.target.value)}
+      />
+
+      {documentsLoading ? (
+        <p>Loading documents...</p>
+      ) : (
+        <div className="admin-users-list">
+          {Object.values(
+            adminDocuments.reduce((groups, document) => {
+              const projectId = document.projects?.id ?? `unknown-${document.id}`;
+
+              if (!groups[projectId]) {
+                groups[projectId] = {
+                  project: document.projects,
+                  documents: []
+                };
+              }
+
+              groups[projectId].documents.push(document);
+              return groups;
+            }, {})
+          )
+            .filter((group) => {
+              const searchText = `
+                ${group.project?.name || ""}
+                ${group.project?.users?.name || ""}
+                ${group.project?.users?.email || ""}
+                ${group.documents.map((doc) => doc.title).join(" ")}
+              `.toLowerCase();
+
+              return searchText.includes(documentSearch.toLowerCase());
+            })
+            .map((group) => (
+              <div className="admin-user-card" key={group.project?.id || group.documents[0].id}>
+                <h3>{group.project?.name || "Unknown Project"}</h3>
+
+                <p>Owner: {group.project?.users?.name || "Unknown"}</p>
+                <p>Email: {group.project?.users?.email || "N/A"}</p>
+
+                <h4>SRS Documents ({group.documents.length})</h4>
+
+                {group.documents.map((document) => (
+                  <div
+                    key={document.id}
+                    className="admin-user-card"
+                    onClick={() => openAdminDocument(document.id)}
+                    style={{ cursor: "pointer", marginTop: "10px" }}
+                  >
+                    <h3>{document.title}</h3>
+                    <p>Version: {document.version || 1}</p>
+                    <p>
+                      Created: {document.created_at
+                        ? new Date(document.created_at).toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                    <strong>Click to view full document →</strong>
+                  </div>
+                ))}
+              </div>
+            ))}
+
+          {adminDocuments.length === 0 && (
+            <p>No documents found.</p>
+          )}
+        </div>
+      )}
+    </>
+  )}
+</section>
         <section className="panel padded">
         {selectedTicket ? (
   <>

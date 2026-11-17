@@ -1,3 +1,4 @@
+import cron from "node-cron";
 import "dotenv/config";
 import express from "express";
 import bcrypt from "bcryptjs";
@@ -5,8 +6,24 @@ import { OAuth2Client } from "google-auth-library";
 import { google } from "googleapis";
 import crypto from "node:crypto";
 import PDFDocument from "pdfkit";
-import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
-import path from "node:path";
+import { Readable } from "node:stream";
+
+import {
+  Document,
+  HeadingLevel,
+  Packer,
+  Paragraph,
+  TextRun,
+  AlignmentType,
+  BorderStyle,
+  Footer,
+  Header,
+  PageNumber,
+  TableOfContents,
+  PageBreak,
+  ShadingType,
+  WidthType
+} from "docx";import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client.ts";
@@ -121,6 +138,112 @@ const verifyGoogleOAuthState = (state) => {
     return null;
   }
 };
+const getGoogleDriveClient = async (userId) => {
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
+    select: {
+      google_access_token: true,
+      google_refresh_token: true,
+      google_token_expiry: true
+    }
+  });
+
+  if (!user?.google_access_token) {
+    throw new Error("Google account is not connected");
+  }
+
+  if (!user.google_refresh_token) {
+    throw new Error("Google refresh token is missing. Reconnect your Google account.");
+  }
+
+  const oauthClient = new google.auth.OAuth2(
+    process.env.GOOGLE_OAUTH_CLIENT_ID,
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+  );
+
+  oauthClient.setCredentials({
+    access_token: decryptGoogleToken(user.google_access_token),
+    refresh_token: decryptGoogleToken(user.google_refresh_token),
+    expiry_date: user.google_token_expiry
+      ? new Date(user.google_token_expiry).getTime()
+      : 0
+  });
+
+  await oauthClient.getAccessToken();
+
+  const refreshedTokens = oauthClient.credentials;
+
+  if (refreshedTokens.access_token) {
+    await prisma.users.update({
+      where: { id: userId },
+      data: {
+        google_access_token: encryptGoogleToken(refreshedTokens.access_token),
+        google_token_expiry: refreshedTokens.expiry_date
+          ? new Date(refreshedTokens.expiry_date)
+          : user.google_token_expiry
+      }
+    });
+  }
+
+  return google.drive({
+    version: "v3",
+    auth: oauthClient
+  });
+};
+const getGoogleCalendarClient = async (userId) => {
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
+    select: {
+      google_access_token: true,
+      google_refresh_token: true,
+      google_token_expiry: true
+    }
+  });
+
+  if (!user?.google_access_token) {
+    throw new Error("Google account is not connected");
+  }
+
+  if (!user.google_refresh_token) {
+    throw new Error("Google refresh token is missing. Reconnect your Google account.");
+  }
+
+  const oauthClient = new google.auth.OAuth2(
+    process.env.GOOGLE_OAUTH_CLIENT_ID,
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+  );
+
+  oauthClient.setCredentials({
+    access_token: decryptGoogleToken(user.google_access_token),
+    refresh_token: decryptGoogleToken(user.google_refresh_token),
+    expiry_date: user.google_token_expiry
+      ? new Date(user.google_token_expiry).getTime()
+      : 0
+  });
+
+  await oauthClient.getAccessToken();
+
+  const refreshedTokens = oauthClient.credentials;
+
+  if (refreshedTokens.access_token) {
+    await prisma.users.update({
+      where: { id: userId },
+      data: {
+        google_access_token: encryptGoogleToken(refreshedTokens.access_token),
+        google_token_expiry: refreshedTokens.expiry_date
+          ? new Date(refreshedTokens.expiry_date)
+          : user.google_token_expiry
+      }
+    });
+  }
+
+  return google.calendar({
+    version: "v3",
+    auth: oauthClient
+  });
+};
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is missing from .env");
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
@@ -159,28 +282,64 @@ const verifyToken = (token) => {
   const payload = JSON.parse(Buffer.from(body, "base64url").toString());
   if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) throw new Error("Token expired");
   return payload;
-};
-const publicUser = (user) => ({
+};const publicUser = (user) => ({
   id: user.id,
+
   name: user.name,
   email: user.email,
   created_at: user.created_at,
   last_login_at: user.last_login_at,
-  profile_image: user.profile_image || ""
-});const authResponse = (user) => ({ user: publicUser(user), token: signToken({ sub: user.id, email: user.email }) });
+  profile_image: user.profile_image || "",
+  google_email: user.google_email || "",
+  google_connected: Boolean(user.google_email)
+});
+const authResponse = (user) => ({ user: publicUser(user), token: signToken({ sub: user.id, email: user.email }) });
 const parseId = (value) => Number.isInteger(Number(value)) && Number(value) > 0 ? Number(value) : null;
 const ownedProject = (userId, projectId) => prisma.projects.findFirst({ where: { id: projectId, user_id: userId }, select: { id: true } });
-const requireAuth = (request, response, next) => {
+const requireAuth = async (request, response, next) => {
+  let payload;
+
   try {
-    const token = request.headers.authorization?.startsWith("Bearer ") ? request.headers.authorization.slice(7) : "";
-    const payload = verifyToken(token);
-    request.user = { id: Number(payload.sub), email: payload.email };
-    return next();
+    const token = request.headers.authorization?.startsWith("Bearer ")
+      ? request.headers.authorization.slice(7)
+      : "";
+
+    payload = verifyToken(token);
   } catch {
-    return response.status(401).json({ error: "Authentication required" });
+    return response.status(401).json({
+      error: "Authentication required"
+    });
   }
+
+  const user = await prisma.users.findUnique({
+    where: { id: Number(payload.sub) },
+    select: {
+      id: true,
+      email: true,
+      is_active: true
+    }
+  });
+
+  if (!user) {
+    return response.status(401).json({
+      error: "Authentication required"
+    });
+  }
+
+  if (!user.is_active) {
+    return response.status(403).json({
+      error: "Your account has been deactivated."
+    });
+  }
+
+  request.user = {
+    id: user.id,
+    email: user.email
+  };
+
+  return next();
 };
-const requireAdmin = (request, response, next) => {
+  const requireAdmin = (request, response, next) => {
   const adminEmail = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
   const userEmail = String(request.user.email || "").trim().toLowerCase();
 
@@ -262,7 +421,12 @@ app.post("/api/auth/login", handle(async (request, response) => {
   const email = typeof request.body.email === "string" ? request.body.email.trim().toLowerCase() : "";
   const password = request.body.password;
 if (!email || typeof password !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error: "A valid email and password are required" });  const user = await prisma.users.findUnique({ where: { email } });
-  if (!user || typeof password !== "string" || !(await bcrypt.compare(password, user.password_hash))) return response.status(401).json({ error: "Incorrect email or password" });
+  if (!user || typeof password !== "string" || !(await bcrypt.compare(password, user.password_hash))) return r
+  if (!user.is_active) {
+  return response.status(403).json({
+    error: "Your account has been deactivated. Please contact support."
+  });
+}
   if (!user.email_verified) return response.status(403).json({ error: "Verify your email before signing in" });
   return response.json(authResponse(await prisma.users.update({ where: { id: user.id }, data: { last_login_at: new Date() } })));
 }));
@@ -329,8 +493,93 @@ app.post("/api/auth/google", handle(async (request, response) => {
   return response.json(authResponse(user));
 }));
 app.get("/api/health", (_request, response) => response.json({ message: "SRS AI API is running" }));
+app.get("/api/google/callback", handle(async (request, response) => {
+  const { code, state, error } = request.query;
+
+  if (error) {
+    return response.status(400).json({
+      error: `Google authorization failed: ${error}`
+    });
+  }
+
+  if (typeof code !== "string" || typeof state !== "string") {
+    return response.status(400).json({
+      error: "Missing Google authorization code or state"
+    });
+  }
+
+  // Verify signed OAuth state
+  const userId = verifyGoogleOAuthState(state);
+
+  if (!userId) {
+    return response.status(401).json({
+      error: "Invalid or expired Google authorization state"
+    });
+  }
+
+  // Confirm the SRS AI user exists
+  const user = await prisma.users.findUnique({
+    where: { id: userId }
+  });
+
+  if (!user) {
+    return response.status(404).json({
+      error: "SRS AI user not found"
+    });
+  }
+
+  // Exchange authorization code for Google tokens
+  const { tokens } = await googleOAuthClient.getToken(code);
+
+  if (!tokens.access_token) {
+    return response.status(400).json({
+      error: "Google access token was not received"
+    });
+  }
+
+  googleOAuthClient.setCredentials(tokens);
+
+  // Retrieve connected Google account email
+  const oauth2 = google.oauth2({
+    version: "v2",
+    auth: googleOAuthClient
+  });
+
+  const profile = await oauth2.userinfo.get();
+
+  const googleEmail = profile.data.email;
+
+  if (!googleEmail) {
+    return response.status(400).json({
+      error: "Unable to retrieve Google account email"
+    });
+  }
+
+  // Preserve an existing refresh token if Google does not return a new one
+  const encryptedRefreshToken = tokens.refresh_token
+    ? encryptGoogleToken(tokens.refresh_token)
+    : user.google_refresh_token;
+
+  // Store encrypted tokens
+  await prisma.users.update({
+    where: { id: userId },
+    data: {
+      google_access_token: encryptGoogleToken(tokens.access_token),
+      google_refresh_token: encryptedRefreshToken,
+      google_token_expiry: tokens.expiry_date
+        ? new Date(tokens.expiry_date)
+        : null,
+      google_email: googleEmail
+    }
+  });
+
+  return response.redirect(
+  "http://localhost:5173/?google_connected=true"
+);
+}));
 
 app.use("/api", requireAuth);
+// Google OAuth callback — must be before requireAuth middleware
 app.get("/api/google/connect", (request, response) => {
   const state = createGoogleOAuthState(request.user.id);
 
@@ -343,6 +592,46 @@ app.get("/api/google/connect", (request, response) => {
 
   return response.json({ authorizationUrl });
 });
+app.post("/api/google/disconnect", handle(async (request, response) => {
+  const user = await prisma.users.findUnique({
+    where: { id: request.user.id },
+    select: {
+      google_access_token: true,
+      google_refresh_token: true
+    }
+  });
+
+  if (!user) {
+    return response.status(404).json({ error: "User not found" });
+  }
+
+  // Revoke the Google refresh token if available.
+  if (user.google_refresh_token) {
+    try {
+      const refreshToken = decryptGoogleToken(user.google_refresh_token);
+
+      await googleOAuthClient.revokeToken(refreshToken);
+    } catch (error) {
+      console.error("Google token revocation failed:", error.message);
+    }
+  }
+
+  // Clear the stored Google connection.
+  await prisma.users.update({
+    where: { id: request.user.id },
+    data: {
+      google_access_token: null,
+      google_refresh_token: null,
+      google_token_expiry: null,
+      google_email: null
+    }
+  });
+
+  return response.json({
+    success: true,
+    message: "Google account disconnected successfully"
+  });
+}));
 // Help & Support API routes
 app.post("/api/support/tickets", handle(async (request, response) => {
  const { subject, category, priority, description } = request.body;
@@ -585,6 +874,281 @@ app.post("/api/admin/support/tickets/:id/replies", requireAdmin, handle(async (r
     reply
   });
 }));
+app.get("/api/admin/dashboard/stats",requireAdmin, handle(async (request, response) => {
+  const [
+    totalUsers,
+    totalProjects,
+    totalDocuments,
+    totalTickets,
+    openTickets
+  ] = await Promise.all([
+    prisma.users.count(),
+    prisma.projects.count(),
+    prisma.srs_documents.count(),
+    prisma.support_tickets.count(),
+    prisma.support_tickets.count({
+      where: {
+        status: {
+          in: ["Pending", "In Progress"]
+        }
+      }
+    })
+  ]);
+
+  return response.json({
+    totalUsers,
+    totalProjects,
+    totalDocuments,
+    totalTickets,
+    openTickets
+  });
+}));
+app.get("/api/admin/users", requireAdmin, handle(async (request, response) => {
+  const users = await prisma.users.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      created_at: true,
+      last_login_at: true,
+      is_active: true
+    },
+    orderBy: {
+      created_at: "desc"
+    }
+  });
+
+  return response.json({ users });
+}));
+app.get("/api/admin/projects", requireAdmin, handle(async (request, response) => {
+  const projects = await prisma.projects.findMany({
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      progress: true,
+      deadline: true,
+      created_at: true,
+      updated_at: true,
+      project_type: true,
+      users: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      _count: {
+        select: {
+          srs_documents: true
+        }
+      }
+    },
+    orderBy: {
+      created_at: "desc"
+    }
+  });
+
+  return response.json({ projects });
+}));
+app.get("/api/admin/projects/:projectId", requireAdmin, handle(async (request, response) => {
+  const projectId = Number(request.params.projectId);
+
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    return response.status(400).json({
+      error: "Invalid project ID"
+    });
+  }
+
+  const project = await prisma.projects.findUnique({
+    where: {
+      id: projectId
+    },
+    select: {
+      id: true,
+      name: true,
+      client_idea: true,
+      client_name: true,
+      project_type: true,
+      target_users: true,
+      technologies: true,
+      notes: true,
+      status: true,
+      progress: true,
+      deadline: true,
+      created_at: true,
+      updated_at: true,
+      users: {
+        select: {
+          name: true,
+          email: true
+        }
+      },
+      srs_documents: {
+        select: {
+          id: true,
+          title: true,
+          version: true,
+          created_at: true
+        }
+      }
+    }
+  });
+
+  if (!project) {
+    return response.status(404).json({
+      error: "Project not found"
+    });
+  }
+
+  return response.json({ project });
+}));
+app.get("/api/admin/documents", requireAdmin, handle(async (request, response) => {
+  const documents = await prisma.srs_documents.findMany({
+    select: {
+      id: true,
+      title: true,
+      version: true,
+      created_at: true,
+      updated_at: true,
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          users: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      }
+    },
+    orderBy: {
+      created_at: "desc"
+    }
+  });
+
+  return response.json({ documents });
+}));
+app.get("/api/admin/documents/:documentId", requireAdmin, handle(async (request, response) => {
+  const documentId = Number(request.params.documentId);
+
+  if (!Number.isInteger(documentId) || documentId <= 0) {
+    return response.status(400).json({ error: "Invalid document ID" });
+  }
+
+  const document = await prisma.srs_documents.findUnique({
+    where: { id: documentId },
+    select: {
+      id: true,
+      title: true,
+      content: true,
+      version: true,
+      created_at: true,
+      updated_at: true,
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          users: {
+            select: {
+              name: true,
+              email: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!document) {
+    return response.status(404).json({ error: "Document not found" });
+  }
+
+  return response.json({ document });
+}));
+app.get("/api/admin/users/:userId", requireAdmin, handle(async (request, response) => {
+  const userId = Number(request.params.userId);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return response.status(400).json({ error: "Invalid user ID" });
+  }
+
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      created_at: true,
+      last_login_at: true,
+      is_active: true,
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          created_at: true,
+          srs_documents: {
+            select: {
+              id: true,
+              title: true,
+              created_at: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!user) {
+    return response.status(404).json({ error: "User not found" });
+  }
+
+  const totalDocuments = user.projects.reduce(
+    (total, project) => total + project.srs_documents.length,
+    0
+  );
+
+  return response.json({
+    user: {
+      ...user,
+      totalProjects: user.projects.length,
+      totalDocuments
+    }
+  });
+}));
+app.patch("/api/admin/users/:userId/status", requireAdmin, handle(async (request, response) => {
+  const userId = Number(request.params.userId);
+  const isActive = request.body.is_active;
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return response.status(400).json({ error: "Invalid user ID" });
+  }
+
+  if (typeof isActive !== "boolean") {
+    return response.status(400).json({ error: "Valid account status is required" });
+  }
+
+  if (userId === request.user.id && !isActive) {
+    return response.status(400).json({ error: "You cannot deactivate your own account" });
+  }
+
+  const user = await prisma.users.update({
+    where: { id: userId },
+    data: { is_active: isActive },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      is_active: true
+    }
+  });
+
+  return response.json({ user });
+}));
 app.patch("/api/admin/support/tickets/:id", requireAdmin, handle(async (request, response) => {
   const ticketId = parseId(request.params.id);
   const { status, priority } = request.body;
@@ -786,7 +1350,14 @@ const projectSelect = {
   user_id: true,
   name: true,
   client_idea: true,
+  client_name: true,
   status: true,
+  deadline: true,
+  notes: true,
+  color: true,
+  icon: true,
+  is_favorite: true,
+  google_calendar_event_id: true,
   created_at: true,
   updated_at: true,
 };const projectActivity = (projectId, action, detail) => prisma.project_activities.create({ data: { project_id: projectId, action, detail } });
@@ -809,6 +1380,14 @@ app.post("/api/projects", handle(async (request, response) => {
   if (typeof name !== "string" || !name.trim() || name.trim().length > 255 || typeof clientIdea !== "string" || !clientIdea.trim()) return response.status(400).json({ error: "Project name and software idea are required" });
   const project = await prisma.projects.create({ data: { user_id: request.user.id, name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : "draft", client_name: typeof client_name === "string" ? client_name.trim().slice(0, 150) || null : null, deadline: typeof deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(deadline) ? new Date(`${deadline}T00:00:00.000Z`) : null, notes: typeof notes === "string" ? notes.trim() || null : null, color: typeof color === "string" ? color.slice(0, 20) : null, icon: typeof icon === "string" ? icon.slice(0, 10) : null }, select: projectSelect });
   await projectActivity(project.id, "created", "Project created");
+  await prisma.notifications.create({
+  data: {
+    user_id: request.user.id,
+    title: "New project created",
+    message: `Your project "${project.name}" has been created successfully.`,
+    type: "project_created"
+  }
+});
   await prisma.clarification_questions.createMany({ data: [
     { project_id: project.id, question: "Who are the main users of this system?", answer_type: "multiple_choice", choices: ["Customers", "Internal team", "Administrators", "All of these"] },
     { project_id: project.id, question: "Does the application need login and role-based access?", answer_type: "yes_no", choices: ["Yes", "No"] },
@@ -816,7 +1395,25 @@ app.post("/api/projects", handle(async (request, response) => {
     { project_id: project.id, question: "Will this project handle personal, payment, or other sensitive data?", answer_type: "yes_no", choices: ["Yes", "No"] }
   ] });
   await projectActivity(project.id, "questions_created", "Starter discovery questions added");
-  if (template && typeof template === "object" && typeof template.content === "string") await prisma.srs_documents.create({ data: { project_id: project.id, title: template.title || "Software Requirements Specification", content: { text: template.content }, version: 1 } });
+if (template && typeof template === "object" && typeof template.content === "string") {
+  await prisma.srs_documents.create({
+    data: {
+      project_id: project.id,
+      title: template.title || "Software Requirements Specification",
+      content: { text: template.content },
+      version: 1
+    }
+  });
+
+  await prisma.notifications.create({
+    data: {
+      user_id: request.user.id,
+      title: "SRS document generated",
+      message: `Your SRS document for "${project.name}" has been generated successfully.`,
+      type: "srs_generated"
+    }
+  });
+}
   return response.status(201).json(project);
 }));
 app.get("/api/projects/:projectId", handle(async (request, response) => {
@@ -828,11 +1425,113 @@ app.get("/api/projects/:projectId", handle(async (request, response) => {
 app.patch("/api/projects/:projectId", handle(async (request, response) => {
   const projectId = parseId(request.params.projectId);
   if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" });
+  const previousProject = await prisma.projects.findUnique({
+  where: { id: projectId },
+  select: { status: true }
+});
   const { name, clientIdea, status, client_name, deadline, notes, color, icon, is_favorite } = request.body;
+  console.log("Project update received:", request.body);
   if (typeof name !== "string" || !name.trim() || typeof clientIdea !== "string" || !clientIdea.trim()) return response.status(400).json({ error: "Project name and software idea are required" });
-  const project = await prisma.projects.update({ where: { id: projectId }, data: { name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : undefined, client_name: typeof client_name === "string" ? client_name.trim().slice(0, 150) || null : undefined, deadline: typeof deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(deadline) ? new Date(`${deadline}T00:00:00.000Z`) : deadline === null ? null : undefined, notes: typeof notes === "string" ? notes.trim() || null : undefined, color: typeof color === "string" ? color.slice(0, 20) : undefined, icon: typeof icon === "string" ? icon.slice(0, 10) : undefined, is_favorite: typeof is_favorite === "boolean" ? is_favorite : undefined, updated_at: new Date() }, select: projectSelect });
+  const project = await prisma.projects.update({ where: { id: projectId }, data: { name: name.trim(), client_idea: clientIdea.trim(), status: ["draft", "in_progress", "complete", "archived"].includes(status) ? status : undefined, client_name: typeof client_name === "string" ? client_name.trim().slice(0, 150) || null : undefined, deadline: deadline === null || deadline === "" 
+  ? null 
+  : typeof deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(deadline)
+    ? new Date(`${deadline}T00:00:00.000Z`)
+    : undefined, notes: typeof notes === "string" ? notes.trim() || null : undefined, color: typeof color === "string" ? color.slice(0, 20) : undefined, icon: typeof icon === "string" ? icon.slice(0, 10) : undefined, is_favorite: typeof is_favorite === "boolean" ? is_favorite : undefined, updated_at: new Date() }, select: projectSelect });
   await projectActivity(projectId, "updated", "Project details updated");
+  console.log("Project saved:", {
+  name: project.name,
+  status: project.status,
+  client_name: project.client_name,
+  deadline: project.deadline
+});
+  const isCompleted =
+  previousProject.status !== "complete" && project.status === "complete";
+
+await prisma.notifications.create({
+  data: {
+    user_id: request.user.id,
+    title: isCompleted ? "Project completed" : "Project updated",
+    message: isCompleted
+      ? `Your project "${project.name}" has been completed.`
+      : `Your project "${project.name}" has been updated.`,
+    type: isCompleted ? "project_completed" : "project_updated"
+  }
+});
   return response.json(project);
+}));
+app.post("/api/projects/:projectId/calendar", handle(async (request, response) => {
+  const projectId = parseId(request.params.projectId);
+
+  const project = await prisma.projects.findFirst({
+    where: {
+      id: projectId,
+      user_id: request.user.id
+    }
+  });
+
+  if (!project) {
+    return response.status(404).json({
+      error: "Project not found"
+    });
+  }
+
+  if (!project.deadline) {
+    return response.status(400).json({
+      error: "Add a project deadline before syncing with Google Calendar."
+    });
+  }
+
+  const calendar = await getGoogleCalendarClient(request.user.id);
+
+  const startDate = new Date(project.deadline)
+    .toISOString()
+    .slice(0, 10);
+
+  const endDate = new Date(`${startDate}T00:00:00.000Z`);
+  endDate.setUTCDate(endDate.getUTCDate() + 1);
+
+  const eventData = {
+    summary: `Project Deadline: ${project.name}`,
+    description: project.notes || project.client_idea,
+    start: { date: startDate },
+    end: { date: endDate.toISOString().slice(0, 10) }
+  };
+
+  let event;
+
+  if (project.google_calendar_event_id) {
+    event = await calendar.events.update({
+      calendarId: "primary",
+      eventId: project.google_calendar_event_id,
+      requestBody: eventData
+    });
+  } else {
+    event = await calendar.events.insert({
+      calendarId: "primary",
+      requestBody: eventData
+    });
+
+    await prisma.projects.update({
+      where: { id: projectId },
+      data: {
+        google_calendar_event_id: event.data.id
+      }
+    });
+  }
+
+ console.log("Google Calendar event created:", {
+  id: event.data.id,
+  htmlLink: event.data.htmlLink
+});
+
+return response.json({
+  success: true,
+  message: "Project deadline synced with Google Calendar.",
+  event: {
+    id: event.data.id,
+    htmlLink: event.data.htmlLink
+  }
+});
 }));
 app.post("/api/projects/:projectId/archive", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); const project = await prisma.projects.update({ where: { id: projectId }, data: { status: "archived", updated_at: new Date() }, select: projectSelect }); await projectActivity(projectId, "archived", "Project archived"); response.json(project); }));
 app.post("/api/projects/:projectId/favorite", handle(async (request, response) => { const projectId = parseId(request.params.projectId); if (!projectId || !(await ownedProject(request.user.id, projectId))) return response.status(404).json({ error: "Project not found" }); const current = await prisma.projects.findUniqueOrThrow({ where: { id: projectId }, select: { is_favorite: true } }); const project = await prisma.projects.update({ where: { id: projectId }, data: { is_favorite: !current.is_favorite, updated_at: new Date() }, select: projectSelect }); await projectActivity(projectId, project.is_favorite ? "favorited" : "unfavorited", project.is_favorite ? "Project pinned as favorite" : "Project removed from favorites"); response.json(project); }));
@@ -872,7 +1571,31 @@ app.post("/api/projects/:projectId/ai/questions", handle(async (request, respons
 }));
 app.post("/api/projects/:projectId/ai/srs", handle(async (request, response) => {
   const id = parseId(request.params.projectId); if (!(await assertProject(request, response, id))) return;
-  try { const project = await prisma.projects.findUniqueOrThrow({ where: { id }, include: { clarification_questions: { orderBy: { created_at: "asc" } } } }); const result = await geminiGenerate(`You are a senior product manager, business analyst, solution architect, and delivery estimator. Write a simple, professional Software Requirements Specification in Markdown. Explain the product in plain language for the user, then give clear build instructions for developers. Include: goal, users, user features, developer notes, functional requirements, acceptance criteria, non-functional requirements, assumptions, out-of-scope items, delivery phases, estimated hours and weeks, and an estimated low/high project cost using a stated hourly-rate assumption. Label all time and cost values as estimates.\n\nProject: ${project.name}\nIdea: ${project.client_idea}\nClarification answers:\n${project.clarification_questions.map((q) => `Q: ${q.question}\nA: ${q.answer || "Not answered"}`).join("\n\n") || "None"}`); return response.status(201).json(await prisma.srs_documents.create({ data: { project_id: id, title: "Software Requirements Specification", content: { text: result.text, generatedBy: "Google Gemini", generatedAt: new Date().toISOString(), includesEstimate: true, tokens: result.tokens }, version: 1 } })); } catch (error) { return aiError(response, error, "Unable to generate AI SRS draft"); }
+  try { const project = await prisma.projects.findUniqueOrThrow({ where: { id }, include: { clarification_questions: { orderBy: { created_at: "asc" } } } }); const result = await geminiGenerate(`You are a senior product manager, business analyst, solution architect, and delivery estimator. Write a simple, professional Software Requirements Specification in Markdown. Explain the product in plain language for the user, then give clear build instructions for developers. Include: goal, users, user features, developer notes, functional requirements, acceptance criteria, non-functional requirements, assumptions, out-of-scope items, delivery phases, estimated hours and weeks, and an estimated low/high project cost using a stated hourly-rate assumption. Label all time and cost values as estimates.\n\nProject: ${project.name}\nIdea: ${project.client_idea}\nClarification answers:\n${project.clarification_questions.map((q) => `Q: ${q.question}\nA: ${q.answer || "Not answered"}`).join("\n\n") || "None"}`); const document = await prisma.srs_documents.create({
+  data: {
+    project_id: id,
+    title: "Software Requirements Specification",
+    content: {
+      text: result.text,
+      generatedBy: "Google Gemini",
+      generatedAt: new Date().toISOString(),
+      includesEstimate: true,
+      tokens: result.tokens
+    },
+    version: 1
+  }
+});
+
+await prisma.notifications.create({
+  data: {
+    user_id: request.user.id,
+    title: "SRS document generated",
+    message: `Your SRS document for "${project.name}" has been generated successfully.`,
+    type: "srs_generated"
+  }
+});
+
+return response.status(201).json(document); } catch (error) { return aiError(response, error, "Unable to generate AI SRS draft"); }
 }));
 app.post("/api/projects/:projectId/documents", handle(async (request, response) => { const id = parseId(request.params.projectId); if (!(await assertProject(request, response, id))) return; if (typeof request.body.title !== "string" || !request.body.title.trim()) return response.status(400).json({ error: "title is required" }); return response.status(201).json(await prisma.srs_documents.create({ data: { project_id: id, title: request.body.title.trim(), content: request.body.content || {}, version: 1 } })); }));
 app.patch("/api/documents/:documentId", handle(async (request, response) => { const documentId = parseId(request.params.documentId); const existing = documentId && await prisma.srs_documents.findUnique({ where: { id: documentId } }); if (!existing || !(await ownedProject(request.user.id, existing.project_id))) return response.status(404).json({ error: "SRS document not found" }); const version = (existing.version || 1) + 1; const document = await prisma.$transaction(async (tx) => { const updated = await tx.srs_documents.update({ where: { id: documentId }, data: { title: typeof request.body.title === "string" && request.body.title.trim() ? request.body.title.trim() : existing.title, content: request.body.content ?? existing.content, version, updated_at: new Date() } }); await tx.srs_versions.create({ data: { srs_document_id: documentId, content: updated.content || {}, version } }); return updated; }); return response.json(document); }));
@@ -906,7 +1629,11 @@ if (format === "pdf") {
   }
 });
 
-  pdf.pipe(response);
+const pdfChunks = [];
+
+pdf.on("data", (chunk) => {
+  pdfChunks.push(chunk);
+});
 
   const NAVY = "#17142F";
 const PURPLE = "#39256F";
@@ -1275,17 +2002,548 @@ pdf.switchToPage(pdf.bufferedPageRange().count - 1);
       });
   }
 
-  return pdf.end();
-}  const paragraphs = text.split(/\r?\n/).map((line) => /^#{1,3}\s+/.test(line) ? new Paragraph({ text: line.replace(/^#+\s*/, ""), heading: line.startsWith("# ") ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2 }) : new Paragraph({ children: [new TextRun({ text: line || " ", size: 21 })] })); const word = new Document({ sections: [{ children: [new Paragraph({ text: document.title, heading: HeadingLevel.TITLE }), new Paragraph({ children: [new TextRun({ text: `Project: ${document.projects.name} | Version ${document.version || 1}`, color: "087859", bold: true, size: 20 })] }), new Paragraph(" "), ...paragraphs] }] }); return response.type("application/vnd.openxmlformats-officedocument.wordprocessingml.document").send(await Packer.toBuffer(word));
-}));
+const pdfBuffer = await new Promise((resolve, reject) => {
+  pdf.on("end", () => resolve(Buffer.concat(pdfChunks)));
+  pdf.on("error", reject);
+  pdf.end();
+});
+if (request.query.destination === "drive") {
+  const drive = await getGoogleDriveClient(request.user.id);
 
+  const uploadedFile = await drive.files.create({
+    requestBody: {
+      name: filename,
+      mimeType: "application/pdf"
+    },
+    media: {
+      mimeType: "application/pdf",
+      body: Readable.from(pdfBuffer)
+    },
+    fields: "id, name, webViewLink"
+  });
+
+  return response.json({
+    success: true,
+    message: "PDF exported to Google Drive successfully",
+    file: uploadedFile.data
+  });
+}
+
+return response
+  .type("application/pdf")
+  .send(pdfBuffer);
+}
+const NAVY = "17142F";
+const PURPLE = "39256F";
+const LIGHT_PURPLE = "EEEAFB";
+const TEXT = "28263D";
+const MUTED = "77758D";
+const BORDER = "DED7EB";
+const WHITE = "FFFFFF";
+
+const projectName = document.projects.name || "SRS Project";
+const version = document.version || 1;
+const date = new Date().toLocaleDateString("en-GB");
+
+// Split the SRS content into sections.
+const lines = String(text || "").replace(/\r/g, "").split("\n");
+
+const sections = [];
+let currentSection = {
+  title: "Introduction",
+  lines: []
+};
+
+for (const rawLine of lines) {
+  const line = rawLine.trim();
+
+  if (/^#\s+/.test(line)) {
+    if (currentSection.lines.length) {
+      sections.push(currentSection);
+    }
+
+    currentSection = {
+      title: line.replace(/^#\s+/, ""),
+      lines: []
+    };
+  } else {
+    currentSection.lines.push(rawLine);
+  }
+}
+
+if (currentSection.lines.length || sections.length === 0) {
+  sections.push(currentSection);
+}
+
+// Markdown cleanup.
+const cleanMarkdown = (value = "") =>
+  String(value)
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/_(.*?)_/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/~~(.*?)~~/g, "$1");
+
+// Header.
+const header = new Header({
+  children: [
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: "SRS AI  /  SOFTWARE REQUIREMENTS",
+          bold: true,
+          color: PURPLE,
+          size: 18
+        })
+      ],
+      border: {
+        bottom: {
+          style: BorderStyle.SINGLE,
+          size: 4,
+          color: BORDER
+        }
+      },
+      spacing: { after: 150 }
+    })
+  ]
+});
+
+// Footer.
+const footer = new Footer({
+  children: [
+    new Paragraph({
+      alignment: AlignmentType.BOTH,
+      border: {
+        top: {
+          style: BorderStyle.SINGLE,
+          size: 4,
+          color: BORDER
+        }
+      },
+      children: [
+        new TextRun({
+          text: "SRS AI  •  SOFTWARE REQUIREMENTS",
+          color: MUTED,
+          size: 16
+        }),
+        new TextRun({
+          text: "\tPage ",
+          color: PURPLE,
+          bold: true,
+          size: 16
+        }),
+        new TextRun({
+          children: [PageNumber.CURRENT],
+          color: PURPLE,
+          bold: true,
+          size: 16
+        }),
+        new TextRun({
+          text: " of ",
+          color: PURPLE,
+          size: 16
+        }),
+        new TextRun({
+          children: [PageNumber.TOTAL_PAGES],
+          color: PURPLE,
+          size: 16
+        })
+      ],
+      tabStops: [
+        {
+          type: "right",
+          position: 9000
+        }
+      ]
+    })
+  ]
+});
+
+// Cover page.
+const children = [
+  new Paragraph({
+    spacing: { before: 1800, after: 250 },
+    alignment: AlignmentType.CENTER,
+    children: [
+      new TextRun({
+        text: "SRS AI",
+        bold: true,
+        color: PURPLE,
+        size: 48
+      })
+    ]
+  }),
+
+  new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 500 },
+    children: [
+      new TextRun({
+        text: "SOFTWARE REQUIREMENTS SPECIFICATION",
+        bold: true,
+        color: MUTED,
+        size: 20
+      })
+    ]
+  }),
+
+  new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 700, after: 300 },
+    children: [
+      new TextRun({
+        text: document.title,
+        bold: true,
+        color: NAVY,
+        size: 36
+      })
+    ]
+  }),
+
+  new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 500 },
+    children: [
+      new TextRun({
+        text: projectName,
+        color: PURPLE,
+        bold: true,
+        size: 25
+      })
+    ]
+  }),
+
+  new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 150 },
+    children: [
+      new TextRun({
+        text: `VERSION ${version}`,
+        bold: true,
+        color: MUTED,
+        size: 20
+      })
+    ]
+  }),
+
+  new Paragraph({
+    alignment: AlignmentType.CENTER,
+    children: [
+      new TextRun({
+        text: `Generated: ${date}`,
+        color: MUTED,
+        size: 18
+      })
+    ]
+  }),
+
+  new Paragraph({
+    children: [new PageBreak()]
+  }),
+
+  // Table of Contents.
+  new Paragraph({
+    spacing: { after: 200 },
+    children: [
+      new TextRun({
+        text: "SRS AI  /  DOCUMENTATION",
+        bold: true,
+        color: PURPLE,
+        size: 18
+      })
+    ]
+  }),
+
+  new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    spacing: { after: 150 },
+    children: [
+      new TextRun({
+        text: "Table of Contents",
+        bold: true,
+        color: NAVY,
+        size: 34
+      })
+    ]
+  }),
+
+  new Paragraph({
+    spacing: { after: 300 },
+    children: [
+      new TextRun({
+        text: "Document structure and sections",
+        color: MUTED,
+        size: 18
+      })
+    ]
+  }),
+
+  new TableOfContents("Table of Contents", {
+    hyperlink: true,
+    headingStyleRange: "1-2"
+  }),
+
+  new Paragraph({
+    children: [new PageBreak()]
+  })
+];
+
+// Content pages.
+sections.forEach((section, sectionIndex) => {
+  children.push(
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      spacing: {
+        before: 250,
+        after: 250
+      },
+      shading: {
+        type: ShadingType.CLEAR,
+        fill: LIGHT_PURPLE
+      },
+      children: [
+        new TextRun({
+          text: `${sectionIndex + 1}.  ${cleanMarkdown(section.title)}`,
+          bold: true,
+          color: NAVY,
+          size: 30
+        })
+      ]
+    })
+  );
+
+  for (const rawLine of section.lines) {
+    const trimmed = rawLine.trim();
+
+    if (!trimmed || /^---+$/.test(trimmed)) {
+      continue;
+    }
+
+    // Subheadings.
+    if (/^#{2,6}\s+/.test(trimmed)) {
+      children.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          spacing: {
+            before: 250,
+            after: 120
+          },
+          children: [
+            new TextRun({
+              text: cleanMarkdown(trimmed),
+              bold: true,
+              color: PURPLE,
+              size: 25
+            })
+          ]
+        })
+      );
+
+      continue;
+    }
+
+    // Quotes.
+    if (/^>\s?/.test(trimmed)) {
+      children.push(
+        new Paragraph({
+          indent: {
+            left: 300,
+            right: 200
+          },
+          spacing: {
+            before: 120,
+            after: 180
+          },
+          shading: {
+            type: ShadingType.CLEAR,
+            fill: LIGHT_PURPLE
+          },
+          border: {
+            left: {
+              style: BorderStyle.SINGLE,
+              size: 18,
+              color: PURPLE
+            }
+          },
+          children: [
+            new TextRun({
+              text: cleanMarkdown(trimmed.replace(/^>\s?/, "")),
+              color: TEXT,
+              size: 20
+            })
+          ]
+        })
+      );
+
+      continue;
+    }
+
+    // Bullets and numbered lists.
+    const bulletMatch = trimmed.match(/^([-*+]|\d+\.)\s+/);
+    const paragraphText = cleanMarkdown(
+      trimmed.replace(/^([-*+]|\d+\.)\s+/, "")
+    );
+
+    children.push(
+      new Paragraph({
+        bullet: bulletMatch ? { level: 0 } : undefined,
+        spacing: {
+          after: 130,
+          line: 300
+        },
+        children: [
+          new TextRun({
+            text: paragraphText,
+            color: TEXT,
+            size: 20
+          })
+        ]
+      })
+    );
+  }
+});
+
+// Create Word document.
+const word = new Document({
+  creator: "SRS AI",
+  title: document.title,
+  description: "Software Requirements Specification",
+  features: {
+    updateFields: true
+  },
+  styles: {
+    default: {
+      document: {
+        run: {
+          font: "Arial",
+          size: 20,
+          color: TEXT
+        },
+        paragraph: {
+          spacing: {
+            after: 120,
+            line: 300
+          }
+        }
+      }
+    }
+  },
+  sections: [
+    {
+      properties: {
+        page: {
+          size: {
+            width: 11906,
+            height: 16838
+          },
+          margin: {
+            top: 1100,
+            bottom: 1100,
+            left: 1050,
+            right: 1050
+          }
+        }
+      },
+      headers: {
+        default: header
+      },
+      footers: {
+        default: footer
+      },
+      children
+    }
+  ]
+});
+
+const wordBuffer = await Packer.toBuffer(word);
+
+return response
+  .type("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+  .send(wordBuffer);
+}));
 app.use("/api", (_request, response) => response.status(404).json({ error: "API route not found" }));
 app.use((error, _request, response, _next) => {
   if (error?.type === "entity.parse.failed") return response.status(400).json({ error: "Request body must contain valid JSON" });
   console.error("Unhandled server error:", error);
   return response.status(500).json({ error: "Unable to complete request" });
 });
+// Automatic project deadline reminders
+cron.schedule("0 9 * * *", async () => {  try {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
 
+    const threeDaysLater = new Date(today);
+    threeDaysLater.setUTCDate(threeDaysLater.getUTCDate() + 3);
+
+    const projects = await prisma.projects.findMany({
+      where: {
+        deadline: {
+          gte: today,
+          lte: threeDaysLater
+        },
+        status: {
+          notIn: ["complete", "archived"]
+        }
+      },
+      select: {
+        id: true,
+        user_id: true,
+        name: true,
+        deadline: true
+      }
+    });
+    console.log("Checking deadline range:", today, "to", threeDaysLater);
+console.log("Matching projects:", projects.length);
+const allProjects = await prisma.projects.findMany({
+  select: {
+    id: true,
+    name: true,
+    status: true,
+    deadline: true
+  }
+});
+
+console.log("All projects in database:", allProjects);
+projects.forEach((project) => {
+  console.log("Project:", project.name, "Deadline:", project.deadline);
+});
+    for (const project of projects) {
+      const deadline = project.deadline.toISOString().slice(0, 10);
+
+      const message = `Your project "${project.name}" is due on ${deadline}.`;
+
+      const existing = await prisma.notifications.findFirst({
+        where: {
+          user_id: project.user_id,
+          type: "deadline_reminder",
+          message,
+          created_at: {
+            gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+          }
+        }
+      });
+
+      if (!existing) {
+        await prisma.notifications.create({
+          data: {
+            user_id: project.user_id,
+            title: "Upcoming project deadline",
+            message,
+            type: "deadline_reminder"
+          }
+        });
+      }
+    }
+
+    console.log("Deadline reminder check completed.");
+  } catch (error) {
+    console.error("Deadline reminder error:", error);
+  }
+}, {
+  timezone: "Asia/Kolkata"
+});
 const server = app.listen(port, () => console.log(`SRS AI API running at http://localhost:${port}`));
 const shutdown = async () => { await prisma.$disconnect(); server.close(() => process.exit(0)); };
 process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);

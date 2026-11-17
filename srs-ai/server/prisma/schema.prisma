@@ -35,6 +35,7 @@ model projects {
   status                  String                    @default("draft") @db.VarChar(30)
   client_name             String?                   @db.VarChar(150)
   deadline                DateTime?                 @db.Date
+  google_calendar_event_id String?
   notes                   String?
   color                   String?                   @db.VarChar(20)
   icon                    String?                   @db.VarChar(10)
@@ -124,11 +125,17 @@ model users {
   email                String             @unique @db.VarChar(255)
   password_hash        String
     google_id            String?            @unique @db.VarChar(255)
+      // Connected Google account
+  google_access_token  String?
+  google_refresh_token String?
+  google_token_expiry  DateTime? @db.Timestamp(6)
+  google_email         String?  @db.VarChar(255)
   created_at           DateTime?          @default(now()) @db.Timestamp(6)
   last_login_at        DateTime?          @db.Timestamp(6)
   api_key_hash         String?
   api_key_created_at   DateTime?          @db.Timestamp(6)
   email_verified       Boolean            @default(false)
+  is_active Boolean @default(true)
   email_otp_hash       String?
   email_otp_expires_at DateTime?          @db.Timestamp(6)
   profile_image        String?
