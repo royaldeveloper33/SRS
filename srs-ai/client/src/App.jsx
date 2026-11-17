@@ -2115,11 +2115,12 @@ const updateAdminTicketPriority = async (priority) => {
 {selectedAdminUser && (
   <div className="admin-user-details">
     <button
-      type="button"
-      onClick={() => setSelectedAdminUser(null)}
-    >
-      ← Back to Users
-    </button>
+  type="button"
+  className="admin-back-btn"
+  onClick={() => setSelectedAdminUser(null)}
+>
+  ← Back to Users
+</button>
 
     <h2>{selectedAdminUser.name}</h2>
   <p>Email: {selectedAdminUser.email}</p>
@@ -2212,13 +2213,13 @@ const updateAdminTicketPriority = async (priority) => {
 <section className="panel padded admin-users-panel">
   {selectedAdminProject ? (
     <div className="admin-user-details">
-      <button
-        type="button"
-        onClick={() => setSelectedAdminProject(null)}
-      >
-        ← Back to Projects
-      </button>
-
+     <button
+  type="button"
+  className="admin-back-btn"
+  onClick={() => setSelectedAdminProject(null)}
+>
+  ← Back to Projects
+</button>
       <h2>{selectedAdminProject.name}</h2>
 
       <h3>Project Information</h3>
@@ -2336,12 +2337,13 @@ const updateAdminTicketPriority = async (priority) => {
   <section className="panel padded admin-users-panel">
   {selectedAdminDocument ? (
     <div className="admin-user-details">
-      <button
-        type="button"
-        onClick={() => setSelectedAdminDocument(null)}
-      >
-        ← Back to Documents
-      </button>
+    <button
+  type="button"
+  className="admin-back-btn"
+  onClick={() => setSelectedAdminDocument(null)}
+>
+  ← Back to Documents
+</button>
 
       <h2>{selectedAdminDocument.title}</h2>
 
@@ -2363,83 +2365,94 @@ const updateAdminTicketPriority = async (priority) => {
     </div>
   ) : (
     <>
-      <div className="section-head">
-        <div>
-          <h2>Document Monitoring</h2>
-          <p>View SRS documents grouped by project.</p>
-        </div>
-      </div>
+    <div className="section-head">
+  <div>
+    <h2>Document Monitoring</h2>
+    <p>View SRS documents grouped by project.</p>
+  </div>
+</div>
 
-      <input
-        type="text"
-        placeholder="Search by project, owner or document..."
-        value={documentSearch}
-        onChange={(e) => setDocumentSearch(e.target.value)}
-      />
+<input
+  type="text"
+  placeholder="Search by project, owner or document..."
+  value={documentSearch}
+  onChange={(e) => setDocumentSearch(e.target.value)}
+/>
 
-      {documentsLoading ? (
-        <p>Loading documents...</p>
-      ) : (
-        <div className="admin-users-list">
-          {Object.values(
-            adminDocuments.reduce((groups, document) => {
-              const projectId = document.projects?.id ?? `unknown-${document.id}`;
+{documentsLoading ? (
+  <p>Loading documents...</p>
+) : (
+  <div className="admin-document-project-list">
+    {Object.values(
+      adminDocuments.reduce((groups, document) => {
+        const projectId = document.projects?.id ?? `unknown-${document.id}`;
 
-              if (!groups[projectId]) {
-                groups[projectId] = {
-                  project: document.projects,
-                  documents: []
-                };
-              }
+        if (!groups[projectId]) {
+          groups[projectId] = {
+            project: document.projects,
+            documents: []
+          };
+        }
 
-              groups[projectId].documents.push(document);
-              return groups;
-            }, {})
-          )
-            .filter((group) => {
-              const searchText = `
-                ${group.project?.name || ""}
-                ${group.project?.users?.name || ""}
-                ${group.project?.users?.email || ""}
-                ${group.documents.map((doc) => doc.title).join(" ")}
-              `.toLowerCase();
+        groups[projectId].documents.push(document);
+        return groups;
+      }, {})
+    )
+      .filter((group) => {
+        const searchText = `
+          ${group.project?.name || ""}
+          ${group.project?.users?.name || ""}
+          ${group.project?.users?.email || ""}
+          ${group.documents.map((doc) => doc.title).join(" ")}
+        `.toLowerCase();
 
-              return searchText.includes(documentSearch.toLowerCase());
-            })
-            .map((group) => (
-              <div className="admin-user-card" key={group.project?.id || group.documents[0].id}>
-                <h3>{group.project?.name || "Unknown Project"}</h3>
+        return searchText.includes(documentSearch.toLowerCase());
+      })
+      .map((group) => (
+        <div
+          className="admin-document-project-card"
+          key={group.project?.id || group.documents[0].id}
+        >
+          <div className="admin-document-project-info">
+            <h3>{group.project?.name || "Unknown Project"}</h3>
+            <p>Owner: {group.project?.users?.name || "Unknown"}</p>
+            <p>Email: {group.project?.users?.email || "N/A"}</p>
+          </div>
 
-                <p>Owner: {group.project?.users?.name || "Unknown"}</p>
-                <p>Email: {group.project?.users?.email || "N/A"}</p>
+          <h4 className="admin-document-heading">
+            SRS Documents ({group.documents.length})
+          </h4>
 
-                <h4>SRS Documents ({group.documents.length})</h4>
+          <div className="admin-document-grid">
+            {group.documents.map((document) => (
+              <button
+                type="button"
+                key={document.id}
+                className="admin-document-card"
+                onClick={() => openAdminDocument(document.id)}
+              >
+                <h3>{document.title}</h3>
 
-                {group.documents.map((document) => (
-                  <div
-                    key={document.id}
-                    className="admin-user-card"
-                    onClick={() => openAdminDocument(document.id)}
-                    style={{ cursor: "pointer", marginTop: "10px" }}
-                  >
-                    <h3>{document.title}</h3>
-                    <p>Version: {document.version || 1}</p>
-                    <p>
-                      Created: {document.created_at
-                        ? new Date(document.created_at).toLocaleDateString()
-                        : "N/A"}
-                    </p>
-                    <strong>Click to view full document →</strong>
-                  </div>
-                ))}
-              </div>
+                <p>Version: {document.version || 1}</p>
+
+                <p>
+                  Created: {document.created_at
+                    ? new Date(document.created_at).toLocaleDateString()
+                    : "N/A"}
+                </p>
+
+                <strong>View full document →</strong>
+              </button>
             ))}
-
-          {adminDocuments.length === 0 && (
-            <p>No documents found.</p>
-          )}
+          </div>
         </div>
-      )}
+      ))}
+
+    {adminDocuments.length === 0 && (
+      <p>No documents found.</p>
+    )}
+  </div>
+)}
     </>
   )}
 </section>
