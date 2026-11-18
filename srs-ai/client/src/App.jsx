@@ -127,7 +127,7 @@ await new Promise((resolve) => setTimeout(resolve, 800));
     setBusy(false);
   }
 };
-  return <main className="auth-page"><section className="brand-panel"><Brand /><div className="brand-content"><small>✦ AI-POWERED REQUIREMENTS</small><h1>Requirements,<br />made <em>clear.</em></h1><p>Turn early-stage software ideas into complete, structured requirements your whole team can understand.</p><b>✓ Ask the right clarification questions</b><b>✓ Generate a professional SRS in minutes</b><b>✓ Keep every version in one workspace</b></div><footer>© 2026 SRS AI · Build with confidence</footer></section><section className="form-panel"><div className="auth-card">{verification ? <><small>EMAIL VERIFICATION</small><h2>Check your inbox</h2><p>We sent a six-digit verification code to <b>{verification}</b>.</p><form onSubmit={verify} className="otp-form"><label>Verification code<input className="otp-input" required inputMode="numeric" autoComplete="one-time-code" maxLength="6" placeholder="000000" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} /></label>{error && <div className="message error">{error}</div>}<button className="primary-btn full" disabled={busy || code.length !== 6}>{busy ? <InlineLoader>Verifying…</InlineLoader> : "Verify email →"}</button></form><div className="switch"><button onClick={() => setVerification(null)}>← Use a different email</button></div></> : <><small>{register ? "START FOR FREE" : "WELCOME BACK"}</small><h2>{register ? "Create your account" : "Welcome back"}</h2><p>{register ? "We will verify your email before creating your workspace." : "Sign in to continue to your workspace."}</p><form onSubmit={submit}>{register && <label>Full name<input required minLength="2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>}<label>Email address<input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label><label>Password
+  return <main className="auth-page"><section className="brand-panel"><Brand /><div className="brand-content"><small>✦ AI-POWERED REQUIREMENTS</small><h1>Requirements,<br />made <em>clear.</em></h1><p>Turn early-stage software ideas into complete, structured requirements your whole team can understand.</p><b>✓ Ask the right clarification questions</b><b>✓ Generate a professional SRS in minutes</b><b>✓ Keep every version in one workspace</b></div><footer>© 2026 SRS AI · Build with confidence</footer></section><section className="form-panel"><div className="auth-card">{verification ? <><small>EMAIL VERIFICATION</small><h2>Check your inbox</h2><p>We sent a six-digit verification code to <b>{verification}</b>.</p><form onSubmit={verify} className="otp-form"><label>Verification code<input className="otp-input" required inputMode="numeric" autoComplete="one-time-code" maxLength="6" placeholder="000000" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} /></label>{error && <div className="message error">{error}</div>}<button className="primary-btn full" disabled={busy || code.length !== 6}>{busy ? <InlineLoader>Verifying…</InlineLoader> : "Verify email →"}</button></form><div className="switch"><button onClick={() => setVerification(null)}>← Use a different email</button></div></> : <><small>{register ? "START FOR FREE" : "WELCOME BACK"}</small><h2>{register ? "Create your account" : "Welcome back"}</h2><p>{register ? "We'll send a verification code to your email address." : "Sign in to continue to your workspace."}</p><form onSubmit={submit}>{register && <label>Full name<input required minLength="2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>}<label>Email address<input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label><label>Password
   <div className="password-field">
     <input
       required
@@ -793,16 +793,29 @@ function Templates({ user, navigate, logout }) {
 }
 
 function Settings({ user, setUser, navigate, logout }) {
-  const [googleConnected, setGoogleConnected] = useState(false);
+const [googleConnected, setGoogleConnected] = useState(false);
 const [googleEmail, setGoogleEmail] = useState("");
-
+const [googleJustConnected, setGoogleJustConnected] = useState(false);
 useEffect(() => {
   api("/api/me")
     .then((result) => {
-      setGoogleConnected(Boolean(result.google_connected));
+      const connected = Boolean(result.google_connected);
+
+      setGoogleConnected(connected);
       setGoogleEmail(result.google_email || "");
+
+      const returningFromGoogle =
+        sessionStorage.getItem("srs-google-connecting") === "true";
+
+      if (connected && returningFromGoogle) {
+        setGoogleJustConnected(true);
+      }
+
+      sessionStorage.removeItem("srs-google-connecting");
     })
-    .catch((err) => console.error("Google status check failed:", err));
+    .catch((err) => {
+      console.error("Google status check failed:", err);
+    });
 }, []);
 
   const [showRemovePhotoModal, setShowRemovePhotoModal] = useState(false);
@@ -841,7 +854,7 @@ const connectGoogle = async () => {
     }
 
     window.location.href = result.authorizationUrl;
-
+    sessionStorage.setItem("srs-google-connecting", "true");
   } catch (err) {
     setGoogleConnecting(false);
     setGoogleError(
@@ -1272,12 +1285,50 @@ aria-hidden="true"
 </button>
 </div>
 </div>
-{googleConnected && (
+{/* Show success message only after a new connection */}
+{googleJustConnected && (
   <div className="google-connection-success">
     <span className="google-success-icon">✓</span>
     <div>
       <strong>Google account connected successfully!</strong>
-      <p>Your Google Drive and Calendar are ready to use.</p>
+      <p>Google account: {googleEmail}</p>
+    </div>
+  </div>
+)}
+
+{/* Keep services visible whenever Google is connected */}
+{googleConnected && (
+  <div className="google-services-list">
+
+    <div className="google-service-item">
+      <span className="google-service-icon">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Google_Drive_icon_%282026%29.svg"
+          alt="Google Drive"
+          width="34"
+          height="34"
+        />
+      </span>
+
+      <div className="google-service-info">
+        <strong>Google Drive</strong>
+        <small>Connected</small>
+      </div>
+    </div>
+    <div className="google-service-item">
+      <span className="google-service-icon">
+        <img
+          src="https://ssl.gstatic.com/images/branding/productlogos/calendar_2026/v2/ico/calendar_2026_256dp.ico"
+          alt="Google Calendar"
+          width="34"
+          height="34"
+        />
+      </span>
+
+      <div className="google-service-info">
+        <strong>Google Calendar</strong>
+        <small>Connected</small>
+      </div>
     </div>
   </div>
 )}

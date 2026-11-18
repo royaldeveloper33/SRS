@@ -403,14 +403,59 @@ const sendOtpEmail = async (email, code) => {
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static(path.join(currentDirectory, "public")));
-
 app.post("/api/auth/register", handle(async (request, response) => {
-  const { name, email, password } = request.body; const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
-  if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || typeof password !== "string" || password.length < 8) return response.status(400).json({ error: "Name, valid email, and a password of at least 8 characters are required" });
-  if (await prisma.users.findUnique({ where: { email: normalizedEmail } })) return response.status(409).json({ error: "An account already exists for this email" });
-  const code = String(crypto.randomInt(100000, 1000000)); const user = await prisma.users.create({ data: { name: name.trim(), email: normalizedEmail, password_hash: await bcrypt.hash(password, 12), email_verified: false, email_otp_hash: crypto.createHash("sha256").update(code).digest("hex"), email_otp_expires_at: new Date(Date.now() + 10 * 60 * 1000) } });
-  try { await sendOtpEmail(user.email, code); } catch (error) { await prisma.users.delete({ where: { id: user.id } }); throw error; }
-  return response.status(201).json({ requiresVerification: true, email: user.email });
+  const { name, email, password } = request.body;
+
+  const normalizedEmail =
+    typeof email === "string" ? email.trim().toLowerCase() : "";
+
+  if (
+    typeof name !== "string" ||
+    name.trim().length < 2 ||
+    name.trim().length > 100 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) ||
+    typeof password !== "string" ||
+    password.length < 8
+  ) {
+    return response.status(400).json({
+      error: "Name, valid email, and a password of at least 8 characters are required"
+    });
+  }
+
+  const existingUser = await prisma.users.findUnique({
+    where: { email: normalizedEmail }
+  });
+
+  if (existingUser) {
+    return response.status(409).json({
+      error: "An account already exists for this email"
+    });
+  }
+
+  const code = String(crypto.randomInt(100000, 1000000));
+
+  const user = await prisma.users.create({
+    data: {
+      name: name.trim(),
+      email: normalizedEmail,
+      password_hash: await bcrypt.hash(password, 12),
+      email_verified: false,
+      email_otp_hash: crypto.createHash("sha256").update(code).digest("hex"),
+      email_otp_expires_at: new Date(Date.now() + 10 * 60 * 1000)
+    }
+  });
+
+  try {
+    await sendOtpEmail(user.email, code);
+  } catch (error) {
+    await prisma.users.delete({ where: { id: user.id } });
+    throw error;
+  }
+
+  return response.status(201).json({
+    requiresVerification: true,
+    email: user.email
+  });
 }));
 app.post("/api/auth/verify-email", handle(async (request, response) => {
   const email = typeof request.body.email === "string" ? request.body.email.trim().toLowerCase() : ""; const code = String(request.body.code || ""); const user = await prisma.users.findUnique({ where: { email } });
@@ -421,13 +466,19 @@ app.post("/api/auth/login", handle(async (request, response) => {
   const email = typeof request.body.email === "string" ? request.body.email.trim().toLowerCase() : "";
   const password = request.body.password;
 if (!email || typeof password !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response.status(400).json({ error: "A valid email and password are required" });  const user = await prisma.users.findUnique({ where: { email } });
-  if (!user || typeof password !== "string" || !(await bcrypt.compare(password, user.password_hash))) return r
+ if (!user || typeof password !== "string" || !(await bcrypt.compare(password, user.password_hash))) {
+  return response.status(401).json({ error: "Invalid email or password" });
+}
   if (!user.is_active) {
   return response.status(403).json({
     error: "Your account has been deactivated. Please contact support."
   });
 }
-  if (!user.email_verified) return response.status(403).json({ error: "Verify your email before signing in" });
+if (!user.email_verified) {
+  return response.status(403).json({
+    error: "Verify your email before signing in"
+  });
+}
   return response.json(authResponse(await prisma.users.update({ where: { id: user.id }, data: { last_login_at: new Date() } })));
 }));
 app.post("/api/auth/google", handle(async (request, response) => {

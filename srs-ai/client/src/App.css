@@ -3968,3 +3968,65 @@ grid-template-columns: repeat(2, minmax(0, 1fr));
   color: #b91c1c;
   font-size: 13px;
 }
+/* Google Drive and Calendar Service Cards */
+
+.google-services-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 15px;
+}
+
+.google-service-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.google-service-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.google-service-item:first-child .google-service-icon {
+  color: #00832d;
+}
+
+.google-service-item:last-child .google-service-icon {
+  color: #4285f4;
+}
+
+.google-service-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.google-service-info strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.google-service-info small {
+  color: #16a34a;
+  font-size: 12px;
+}
+
+.google-service-check {
+  margin-left: auto;
+  color: #16a34a;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .google-services-list {
+    grid-template-columns: 1fr;
+  }
+}
