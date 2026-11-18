@@ -831,7 +831,8 @@ const changeTheme = (nextTheme) => {
 };
 const connectGoogle = async () => {
   try {
-    setNote("Connecting to Google...");
+    setGoogleConnecting(true);
+    setGoogleError("");
 
     const result = await api("/api/google/connect");
 
@@ -840,11 +841,15 @@ const connectGoogle = async () => {
     }
 
     window.location.href = result.authorizationUrl;
+
   } catch (err) {
-    setNote(err.message);
+    setGoogleConnecting(false);
+    setGoogleError(
+      err.message || "Unable to connect your Google account. Please try again."
+    );
   }
 };
-const disconnectGoogle = async () => {
+  const disconnectGoogle = async () => {
   if (!window.confirm("Are you sure you want to disconnect your Google account?")) {
     return;
   }
@@ -882,9 +887,11 @@ const changePassword = async (event) => {
     setNote(err.message);
   }
 };
-const [profilePhoto, setProfilePhoto] = useState(
-  user.profile_image || user.profilePhoto || ""
+   const [profilePhoto, setProfilePhoto] = useState(
+   user.profile_image || user.profilePhoto || ""
 ); const [password, setPassword] = useState({ currentPassword: "", newPassword: "" }); const [note, setNote] = useState("");
+   const [googleConnecting, setGoogleConnecting] = useState(false);
+   const [googleError, setGoogleError] = useState("");
    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
    const [showNewPassword, setShowNewPassword] = useState(false);
 {
@@ -1222,12 +1229,16 @@ aria-hidden="true"
 
     <div className="google-account-text">
       <strong>Google</strong>
-   <span>
-  {googleConnected
+ <span>
+  {googleConnecting
+    ? "Please wait while we securely connect your Google account to SRS AI."
+    : googleError
+    ? googleError
+    : googleConnected
     ? `Connected as ${googleEmail}`
     : "Connect your Google account to use Drive and Calendar."}
 </span>
-    </div>
+  </div>
   </div>
 
   <div className="google-account-actions">
@@ -1243,16 +1254,40 @@ aria-hidden="true"
 
 <button
   type="button"
-className={`secondary-btn connect-google-btn ${googleConnected ? "disconnect-google-btn" : "connect-google-btn"}`}  onClick={googleConnected ? disconnectGoogle : connectGoogle}
+  className={`secondary-btn connect-google-btn ${
+    googleConnected ? "disconnect-google-btn" : ""
+  }`}
+  onClick={googleConnected ? disconnectGoogle : connectGoogle}
+  disabled={googleConnecting}
 >
   <span className="connect-icon">
-    {googleConnected ? "" : "↗"}
+    {googleConnecting ? "⏳" : googleConnected ? "" : "↗"}
   </span>
-  {googleConnected ? "Disconnect Google" : "Connect Google"}
+
+  {googleConnecting
+    ? "Connecting..."
+    : googleConnected
+    ? "Disconnect Google"
+    : "Connect Google"}
 </button>
 </div>
 </div>
-
+{googleConnected && (
+  <div className="google-connection-success">
+    <span className="google-success-icon">✓</span>
+    <div>
+      <strong>Google account connected successfully!</strong>
+      <p>Your Google Drive and Calendar are ready to use.</p>
+    </div>
+  </div>
+)}
+{googleError && (
+  <div className="google-connection-error">
+    <strong>Google connection failed</strong>
+    <p>{googleError}</p>
+    <small>Please check your connection and try again.</small>
+  </div>
+)}
 <div className="google-account-note">
   <span className="google-note-icon">ⓘ</span>
 <span>Manage your Google connection and sign-in settings here.</span></div>
